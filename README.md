@@ -34,12 +34,15 @@ Base de la plataforma: autenticación, roles y el núcleo del repositorio de con
 
 ---
 
-### 🔵 Etapa 2 — Editor completo de procesos
+### ✅ Etapa 2 — Editor completo de procesos *(completada)*
 *Objetivo: los líderes pueden documentar procesos nuevos con todos los campos.*
 
-- [ ] Campo `nombre` de actividad en el formulario de pasos
-- [ ] Campos `entradas`, `salidas`, `periodicidad`, `tiempos` en el editor
-- [ ] Limpieza de código: extraer estilos inline a clases CSS
+- [x] Campo `nombre` de actividad en el formulario de pasos
+- [x] Campos `entradas`, `salidas`, `periodicidad`, `tiempos` en el editor
+- [x] Limpieza de código: clases CSS reutilizables en vez de estilos inline
+- [x] **Procesos por cliente** en Servicio y Programación: ficha de cliente
+      con varios contactos + acuerdo de servicio (tarifa, tipo de servicio,
+      uniforme, detalles)
 
 ---
 
