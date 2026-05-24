@@ -296,6 +296,7 @@ a { color: inherit; text-decoration: none; }
 }
 .badge::before { content: ""; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
 .badge--no-dot::before { display: none; }
+.badge--wrap { white-space: normal; align-items: flex-start; text-align: left; max-width: 100%; line-height: 1.4; }
 .badge--success { background: var(--success-soft); color: var(--success-ink); }
 .badge--warning { background: var(--warning-soft); color: var(--warning-ink); }
 .badge--danger { background: var(--danger-soft); color: var(--danger-ink); }
