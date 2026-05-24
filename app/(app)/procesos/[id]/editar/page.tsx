@@ -75,6 +75,13 @@ export default async function PaginaEditarProceso({ params }: { params: Promise<
             gestion_id: proceso.gestion_id,
             pasos: pasosOrdenados,
             documentos: proceso.documentos as { id: string; nombre: string; tipo_archivo: string; url_descarga: string; tamano_bytes: number | null }[],
+            es_proceso_cliente: proceso.es_proceso_cliente ?? false,
+            cliente_nombre: proceso.cliente_nombre,
+            cliente_contactos: (proceso.cliente_contactos as { nombre: string; telefono: string; correo: string }[]) ?? [],
+            acuerdo_tarifa: proceso.acuerdo_tarifa,
+            acuerdo_tipo_servicio: proceso.acuerdo_tipo_servicio,
+            acuerdo_uniforme: proceso.acuerdo_uniforme,
+            acuerdo_detalles: proceso.acuerdo_detalles,
           }}
         />
       </main>
