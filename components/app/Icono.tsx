@@ -37,6 +37,9 @@ const trazos: Record<string, React.ReactNode> = {
   shield: <><path d="M12 3 4 6v6c0 4 3 7 8 9 5-2 8-5 8-9V6Z"/><path d="m9 12 2 2 4-4"/></>,
   handshake: <><path d="M11 17 9 19a2 2 0 1 1-3-3l5-5"/><path d="m14 11 6 6a2 2 0 0 0 3-3l-5-5"/><path d="M3 9h4l2-2 4 3 4-3 4 3"/></>,
   workflow: <><rect x="3" y="3" width="6" height="6" rx="1.2"/><rect x="15" y="3" width="6" height="6" rx="1.2"/><rect x="9" y="15" width="6" height="6" rx="1.2"/><path d="M6 9v3a2 2 0 0 0 2 2h4"/><path d="M18 9v3a2 2 0 0 1-2 2h-4"/></>,
+  target: <><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/></>,
+  chart: <><path d="M3 3v18h18"/><path d="M7 15l4-4 4 3 5-7"/></>,
+  clipboard: <><rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4V3a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v1"/><path d="M9 11h6"/><path d="M9 15h4"/></>,
 }
 
 interface IconoProps {

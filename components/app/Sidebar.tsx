@@ -36,6 +36,11 @@ export default function Sidebar({ rol, aprobacionesPendientes = 0, gestionId }: 
         <Icono nombre="grid" className="nav-item__icon" /> Procesos y Procedimientos
       </Link>
 
+      <Link href="/desempeno" className={`nav-item ${activa('/desempeno') ? 'is-active' : ''}`}>
+        <Icono nombre="target" className="nav-item__icon" /> Desempeño
+        <span className="nav-item__pill" style={{ background: 'var(--primary-soft)', color: 'var(--primary-ink)' }}>Nuevo</span>
+      </Link>
+
       <Link href="/buscar" className={`nav-item ${activa('/buscar') ? 'is-active' : ''}`}>
         <Icono nombre="search" className="nav-item__icon" /> Buscar
         <span style={{ marginLeft: 'auto', fontFamily: 'var(--font-mono)', fontSize: 11, background: 'var(--surface-sunken)', border: '1px solid var(--border)', padding: '1px 6px', borderRadius: 4, color: 'var(--text-3)' }}>⌘K</span>
@@ -82,7 +87,7 @@ export default function Sidebar({ rol, aprobacionesPendientes = 0, gestionId }: 
       <div style={{ padding: '12px 10px', borderTop: '1px solid var(--divider)', marginTop: 10 }}>
         <div className="hstack" style={{ fontSize: 12, color: 'var(--text-3)' }}>
           <Icono nombre="info" className="icon icon--sm" />
-          <span>v0.1 · MVP Etapa 1</span>
+          <span>v0.3 · Etapa 3 · Desempeño</span>
         </div>
       </div>
     </aside>
