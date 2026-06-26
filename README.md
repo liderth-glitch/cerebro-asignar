@@ -100,6 +100,11 @@ Mide las competencias organizacionales de cada colaborador, compara contra el ni
 - [x] 132 gestiones asignadas (creadas 12 nuevas: Estratégica, TI, Tesorería, Contabilidad, etc.)
 - [x] 27 líderes promovidos automáticamente desde la columna "Líder de gestión"
 
+#### ✅ Sub-etapa A.8 — Unificación de identidades + trigger anti-duplicados *(completada)*
+- [x] Simon admin unificado con su registro del Excel (ASI473)
+- [x] Trigger `manejar_nuevo_usuario` mejorado: al loguearse por primera vez, busca por correo y reusa el registro existente del Excel en vez de duplicarlo
+- [x] Evita el bug de "asignar par a la persona equivocada" cuando hay duplicados
+
 #### ✅ Sub-etapa B — Ciclos y plan de evaluación *(completada)*
 - [x] TH crea un ciclo con nombre, fechas y bandas que aplican
 - [x] Al guardar: instanciación automática de evaluaciones por colaborador
@@ -108,12 +113,13 @@ Mide las competencias organizacionales de cada colaborador, compara contra el ni
 - [x] Validación de modalidad según banda (360° / 270°)
 - [x] KPIs de cobertura del ciclo
 
-#### 🔵 Sub-etapa C — Captura de cuestionarios
-- [ ] Lista de pendientes por evaluador
-- [ ] Cuestionario en tercera persona (jefe/par/reporte)
-- [ ] Cuestionario en primera persona (autoevaluación)
-- [ ] Persistencia de respuestas con escala 1-5 (o "no observado")
-- [ ] Recordatorios automáticos a evaluadores pendientes
+#### ✅ Sub-etapa C — Captura de cuestionarios *(completada)*
+- [x] Lista de pendientes por evaluador con KPIs y badges por tipo
+- [x] Cuestionario en tercera persona (jefe/par/reporte)
+- [x] Cuestionario en primera persona (autoevaluación)
+- [x] Persistencia de respuestas con escala 1-5 (o "no observado")
+- [x] Confidencialidad: RLS + mensaje al evaluador
+- [x] Guardado parcial + barra de progreso sticky
 
 #### 🔵 Sub-etapa D — Cálculo y reporte individual
 - [ ] Motor de cálculo con promedios simples y ponderados por fuente
