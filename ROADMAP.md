@@ -179,10 +179,33 @@ Mide las competencias organizacionales de cada colaborador, compara contra el ni
 
 ## Etapa 8 — Onboarding / Acogida Laboral
 
-- [ ] Checklist de onboarding por cargo | Asignado: ``
-- [ ] Progreso guardado por usuario | Asignado: ``
-- [ ] Firma digital de recibido | Asignado: ``
-- [ ] Vista del líder para seguimiento | Asignado: ``
+Asignar es temporal: entra gente constantemente y la rotación es alta, así que la acogida tiene que ser repetible y auditable. La idea es una **plantilla de checklist** que se instancia para cada persona que ingresa, con seguimiento y firma de recibido.
+
+**Modelo previsto:**
+- `onboarding_plantillas` — nombre, ámbito (general / por gestión / por cargo), activa
+- `onboarding_items_plantilla` — orden, título, descripción, **responsable** (TH · jefe · colaborador), obligatorio, **plazo_dias** (día 1, semana 1, mes 1), url_recurso
+- `onboarding` — instancia por persona: usuario_id, plantilla_id, fecha_inicio, estado, firma_recibido
+- `onboarding_items` — estado, hecho_por, hecho_at, nota
+
+### Sub-etapa A — Modelo y plantillas ⭐ (siguiente)
+- [ ] Tablas de plantillas + ítems, con RLS (admin edita, todos leen) | Asignado: ``
+- [ ] Panel `/admin/onboarding`: crear plantilla, añadir/reordenar/eliminar ítems | Asignado: ``
+- [ ] Seed de una plantilla general con los pasos típicos de Asignar | Asignado: ``
+
+### Sub-etapa B — Instancia y vista del colaborador
+- [ ] Tablas de instancia + RPC `iniciar_onboarding(usuario, plantilla)` que copia los ítems | Asignado: ``
+- [ ] `/onboarding` "Mi acogida": checklist, barra de progreso, marcar los ítems propios | Asignado: ``
+- [ ] Notificación al colaborador y a su jefe al iniciarse (usa el centro de notificaciones) | Asignado: ``
+
+### Sub-etapa C — Seguimiento y firma
+- [ ] `/onboarding/seguimiento`: quién está en acogida, % de avance, ítems vencidos; admin ve todo, líder solo su gestión | Asignado: ``
+- [ ] **Firma de recibido** al completar, reutilizando el patrón de PDI (`Nombre — fecha`) | Asignado: ``
+- [ ] Notificar ítems vencidos según `plazo_dias` | Asignado: ``
+
+### Sub-etapa D — Enganches
+- [ ] Iniciar la acogida desde la ficha del usuario (y opcionalmente al importar un ingreso nuevo) | Asignado: ``
+- [ ] Ítems que enlazan a **políticas** (Etapa 7) y a los **procesos de su gestión** como lectura obligatoria | Asignado: ``
+- [ ] Cadena con Comités fase 4 (puntos desde el período de prueba) — depende de Etapa 10 | Asignado: ``
 
 ---
 
