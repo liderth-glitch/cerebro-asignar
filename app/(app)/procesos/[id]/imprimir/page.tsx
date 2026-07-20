@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { obtenerSesion } from '@/lib/sesion'
 import Icono from '@/components/app/Icono'
@@ -112,7 +113,14 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
           <tbody>
             <tr>
               <td className="doc-head__marca">
-                <strong>ASIGNAR S.A.S.</strong>
+                <Image
+                  src="/logo-asignar.png"
+                  alt="Asignar S.A.S."
+                  width={150}
+                  height={150}
+                  priority
+                  className="doc-head__logo"
+                />
                 <span>{gestion?.nombre ?? 'Gestión'}</span>
               </td>
               <td className="doc-head__titulo">
