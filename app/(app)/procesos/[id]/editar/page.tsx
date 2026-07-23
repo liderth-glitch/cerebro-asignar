@@ -14,7 +14,7 @@ export default async function PaginaEditarProceso({ params }: { params: Promise<
 
   const { data: proceso } = await supabase
     .from('procesos')
-    .select('*, pasos(id, numero_orden, nombre, descripcion, cargo_responsable, entradas, periodicidad, salidas, acuerdo_servicio, tiempos), documentos(id, nombre, tipo_archivo, url_descarga, tamano_bytes)')
+    .select('*, pasos(id, numero_orden, nombre, descripcion, cargo_responsable, entradas, periodicidad, salidas, acuerdo_servicio, tiempos, proceso_cliente, paso_cargos(cargo_id, tipo, descripcion, gestion_apoyo_id, orden)), documentos(id, nombre, tipo_archivo, url_descarga, tamano_bytes)')
     .eq('id', id)
     .single()
 
@@ -25,21 +25,35 @@ export default async function PaginaEditarProceso({ params }: { params: Promise<
     redirect(`/procesos/${id}`)
   }
 
-  const [{ data: gestiones }, { data: tiposDoc }] = await Promise.all([
+  const [{ data: gestiones }, { data: tiposDoc }, { data: cargos }] = await Promise.all([
     supabase.from('gestiones').select('id, nombre').eq('activa', true).order('nombre'),
     supabase.from('tipos_documento').select('id, nombre, prefijo').order('orden'),
+    supabase.from('cargos').select('id, nombre, banda').order('nombre'),
   ])
 
+  type PasoCargoRaw = {
+    cargo_id: string; tipo: string; descripcion: string | null
+    gestion_apoyo_id: string | null; orden: number
+  }
   type PasoForm = {
     id: string; numero_orden: number; nombre: string | null; descripcion: string; cargo_responsable: string
-    entradas: string | null; periodicidad: string | null; salidas: string | null; acuerdo_servicio: string | null; tiempos: string | null
+    entradas: string | null; periodicidad: string | null; salidas: string | null; acuerdo_servicio: string | null; tiempos: string | null; proceso_cliente: string | null
+    paso_cargos: PasoCargoRaw[] | null
   }
   const pasosOrdenados = (proceso.pasos as PasoForm[])
     .sort((a, b) => a.numero_orden - b.numero_orden)
     .map(p => ({
       id: p.id, numero_orden: p.numero_orden, nombre: p.nombre ?? '', descripcion: p.descripcion,
       cargo_responsable: p.cargo_responsable, entradas: p.entradas ?? '', periodicidad: p.periodicidad ?? '',
-      salidas: p.salidas ?? '', acuerdo_servicio: p.acuerdo_servicio ?? '', tiempos: p.tiempos ?? '',
+      salidas: p.salidas ?? '', acuerdo_servicio: p.acuerdo_servicio ?? '', tiempos: p.tiempos ?? '', proceso_cliente: p.proceso_cliente ?? '',
+      cargos: [...(p.paso_cargos ?? [])]
+        .sort((a, b) => a.orden - b.orden)
+        .map(c => ({
+          cargo_id: c.cargo_id,
+          tipo: (c.tipo === 'apoyo' ? 'apoyo' : 'responsable') as 'responsable' | 'apoyo',
+          descripcion: c.descripcion ?? '',
+          gestion_apoyo_id: c.gestion_apoyo_id,
+        })),
     }))
 
   return (
@@ -54,6 +68,7 @@ export default async function PaginaEditarProceso({ params }: { params: Promise<
           gestionIdInicial={proceso.gestion_id}
           rol={sesion.rol}
           tiposDocumento={tiposDoc ?? []}
+          cargos={cargos ?? []}
           procesoExistente={{
             id: proceso.id,
             nombre: proceso.nombre,

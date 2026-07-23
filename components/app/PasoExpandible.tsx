@@ -3,17 +3,32 @@
 import { useState } from 'react'
 import Icono from '@/components/app/Icono'
 
+export type PasoCargoVista = {
+  tipo: string
+  descripcion: string | null
+  orden: number
+  cargo: { nombre: string } | { nombre: string }[] | null
+  gestion_apoyo: { id: string; nombre: string } | { id: string; nombre: string }[] | null
+}
+
 export type PasoDetalle = {
   id: string
   numero_orden: number
   nombre: string | null
   descripcion: string
+  /** Texto heredado: se muestra solo si el paso aún no tiene cargos del catálogo */
   cargo_responsable: string
   entradas: string | null
   periodicidad: string | null
   salidas: string | null
   acuerdo_servicio: string | null
   tiempos: string | null
+  paso_cargos?: PasoCargoVista[] | null
+}
+
+/** Supabase devuelve las relaciones como arrays */
+function uno<T>(v: T | T[] | null): T | null {
+  return Array.isArray(v) ? (v[0] ?? null) : v
 }
 
 function FilaInfo({ label, valor }: { label: string; valor: string | null }) {
@@ -68,12 +83,39 @@ export default function PasoExpandible({ paso, index, total }: { paso: PasoDetal
             {paso.nombre || paso.descripcion}
           </p>
           <div style={{ marginTop: 6, display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-            {paso.cargo_responsable && (
-              <span className="badge badge--neutral badge--no-dot badge--wrap" style={{ fontSize: 12 }}>
-                <Icono nombre="users" className="icon icon--sm" style={{ flexShrink: 0, marginTop: 1 }} />
-                <span>{paso.cargo_responsable}</span>
-              </span>
-            )}
+            {(() => {
+              const cargos = [...(paso.paso_cargos ?? [])].sort((a, b) => a.orden - b.orden)
+              // Sin cargos del catálogo todavía: se muestra el texto heredado
+              if (cargos.length === 0) {
+                return paso.cargo_responsable ? (
+                  <span className="badge badge--neutral badge--no-dot badge--wrap" style={{ fontSize: 12 }}>
+                    <Icono nombre="users" className="icon icon--sm" style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span>{paso.cargo_responsable}</span>
+                  </span>
+                ) : null
+              }
+              return cargos.map((pc, i) => {
+                const nombre = uno(pc.cargo)?.nombre
+                if (!nombre) return null
+                const esApoyo = pc.tipo === 'apoyo'
+                const gestion = uno(pc.gestion_apoyo)
+                return (
+                  <span key={i} className="badge badge--no-dot badge--wrap"
+                    style={{
+                      fontSize: 12,
+                      background: esApoyo ? 'var(--surface-2)' : 'var(--primary-soft)',
+                      color: esApoyo ? 'var(--text-2)' : 'var(--primary-ink)',
+                    }}>
+                    <Icono nombre={esApoyo ? 'handshake' : 'users'} className="icon icon--sm"
+                      style={{ flexShrink: 0, marginTop: 1 }} />
+                    <span>
+                      {nombre}
+                      {esApoyo && <> · apoyo{gestion ? ` de ${gestion.nombre}` : ''}</>}
+                    </span>
+                  </span>
+                )
+              })
+            })()}
             {paso.periodicidad && (
               <span className="badge badge--neutral badge--no-dot" style={{ fontSize: 12, background: 'var(--surface-2)' }}>
                 <Icono nombre="history" className="icon icon--sm" /> {paso.periodicidad}
