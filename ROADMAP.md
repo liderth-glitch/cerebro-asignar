@@ -323,6 +323,37 @@ Levantado por Control Interno. **Requiere sesión con el comité** para definir 
 
 ---
 
+## Revisión con John William — 2026-07-22 (procesos y procedimientos)
+
+Fuente: Granola “Cerebro Asignar revisión John William” + `HOMOLOGACION_COMPLETA_GESTION_SELECCION 2.xlsx`.
+
+### Arreglos acordados
+- [x] **#2 Cargos del catálogo, varios por actividad** — tabla `paso_cargos` (paso → cargo, con `tipo`, descripción propia, orden). Selector con buscador en el editor; se muestran en la ficha y en el PDF
+- [x] **#3 Cargos de apoyo transversales** — mismo modelo con `tipo='apoyo'` + `gestion_apoyo_id`. Se ven marcados como apoyo con su gestión de origen
+- [x] **#1 Plantilla del PDF** — la tabla del procedimiento ahora replica las **8 columnas del formato de John**: Entradas · Actividades · Descripción · Periodicidad · Salidas–Entregables · Acuerdo de servicio · **Cargo o proceso cliente** (columna nueva, `pasos.proceso_cliente`) · Tiempo. PDF en **apaisado** porque en vertical el texto quedaba ilegible
+- [ ] Hipervínculo del cargo de apoyo al procedimiento de la otra gestión (falta `proceso_apoyo_id` en la UI) | Asignado: ``
+
+### ⚠️ Homologación pendiente de cargos
+La migración fue **conservadora a propósito**: solo se enlazaron los cargos cuyo nombre calza exacto con el catálogo. Resultado: **53 enlaces en 48 pasos; 103 pasos siguen con el cargo en texto libre**. No se mapeó por parecido porque el heurístico producía disparates (“Cliente” → “Analista Contable”).
+
+Causas del desajuste, para decidir con John y Diana:
+1. **Nomenclatura distinta**: los procesos dicen “Analista de compensación” y el catálogo “Asistente/Auxiliar Compensacion”; “Coordinador de selección” vs “Lider de seleccion”.
+2. **Cargos que faltan en el catálogo**: Gerente General, Gerente Administrativo, Gerente Comercial y Operativo.
+3. **Valores que no son cargos**: “Cliente”, “Cliente externo”, “COPASST”, “Coordinadores”, “Gestión de …”.
+
+El editor marca cada paso sin homologar mostrando el texto anterior, para resolverlo sobre la marcha.
+
+- [ ] Decidir con John/Diana: qué cargos faltan crear y qué hacer con los valores que no son cargos | Asignado: `Simón`
+- [ ] Panel de homologación masiva (mapear los 103 pasos de una) | Asignado: ``
+
+### Ideas nuevas de la reunión (ver artefacto del layout)
+- [ ] **Manual de cargo automático** — abrir un cargo trae todas sus actividades. Ya viable gracias a `paso_cargos`. = Etapa 18 | Asignado: ``
+- [ ] Tareas con periodicidad y fecha → compromiso automático en Comités + recordatorios (“en el tintero”) | Asignado: ``
+- [ ] Sede/ciudad del procedimiento (Bogotá / Medellín / Costa) | Asignado: ``
+- [ ] Buscador con IA sobre la documentación (visión final) | Asignado: ``
+
+---
+
 ## Etapa 9 — Entrenamientos y Capacitaciones
 
 - [ ] Registro de capacitaciones por colaborador | Asignado: ``

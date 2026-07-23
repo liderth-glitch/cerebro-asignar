@@ -1184,7 +1184,13 @@ select.ca-select, select.input { appearance: none; background-image: url("data:i
   flex-wrap: wrap;
 }
 
-@page { size: A4; margin: 14mm; }
+/* La tabla del procedimiento tiene 9 columnas: en pantalla se desplaza sola */
+.doc-scroll { overflow-x: auto; }
+.doc-tabla--ancha { min-width: 900px; font-size: 10px; }
+.doc-tabla--ancha th, .doc-tabla--ancha td { padding: 5px 6px; }
+
+/* Apaisado: con 9 columnas, A4 vertical deja el texto ilegible */
+@page { size: A4 landscape; margin: 10mm; }
 
 @media print {
   /* Oculta el shell (sidebar, topbar, botones) sin depender de sus clases */
@@ -1204,6 +1210,10 @@ select.ca-select, select.input { appearance: none; background-image: url("data:i
   }
   .no-print { display: none !important; }
   .doc-tabla { font-size: 9.5px; }
+  /* Al imprimir no hay scroll: la tabla ancha debe caber en la hoja */
+  .doc-scroll { overflow-x: visible; }
+  .doc-tabla--ancha { min-width: 0; width: 100%; font-size: 8px; }
+  .doc-tabla--ancha th, .doc-tabla--ancha td { padding: 3px 4px; }
   .doc-head { page-break-after: avoid; }
   /* Sin esto el navegador descarta los fondos de las cabeceras de tabla y el logo */
   .doc-print, .doc-print * {

@@ -9,25 +9,29 @@ import BadgeEstado from '@/components/app/BadgeEstado'
 import { crearClienteNavegador } from '@/lib/supabase/client'
 import type { Rol, EstadoProceso } from '@/types'
 import { plantillaDeTipo, tipoUsaPasos, pistaPorTipo, type SeccionDoc } from '@/lib/documentos/plantillas'
+import SelectorCargos, { type CargoCatalogo, type PasoCargo } from './SelectorCargos'
 
 interface Paso {
   id?: string
   numero_orden: number
   nombre: string
   descripcion: string
+  /** Texto heredado; se conserva mientras se homologa al catálogo de cargos */
   cargo_responsable: string
+  cargos: PasoCargo[]
   entradas: string
   periodicidad: string
   salidas: string
   acuerdo_servicio: string
   tiempos: string
+  proceso_cliente: string
 }
 interface Documento { id?: string; nombre: string; tipo_archivo: string; url_descarga: string; tamano_bytes: number | null; archivo?: File }
 interface Contacto { nombre: string; telefono: string; correo: string }
 
 const pasoVacio = (orden: number): Paso => ({
-  numero_orden: orden, nombre: '', descripcion: '', cargo_responsable: '',
-  entradas: '', periodicidad: '', salidas: '', acuerdo_servicio: '', tiempos: '',
+  numero_orden: orden, nombre: '', descripcion: '', cargo_responsable: '', cargos: [],
+  entradas: '', periodicidad: '', salidas: '', acuerdo_servicio: '', tiempos: '', proceso_cliente: '',
 })
 const contactoVacio = (): Contacto => ({ nombre: '', telefono: '', correo: '' })
 
@@ -36,6 +40,7 @@ interface Props {
   gestionIdInicial: string
   rol: Rol
   tiposDocumento: { id: string; nombre: string; prefijo: string }[]
+  cargos: CargoCatalogo[]
   procesoExistente?: {
     id: string
     nombre: string
@@ -68,7 +73,7 @@ const periodicidades = [
   'Bimestral', 'Trimestral', 'Semestral', 'Anual', 'Ocasional', 'Por demanda',
 ]
 
-export default function FormularioProceso({ gestiones, gestionIdInicial, rol, tiposDocumento, procesoExistente }: Props) {
+export default function FormularioProceso({ gestiones, gestionIdInicial, rol, tiposDocumento, cargos, procesoExistente }: Props) {
   const router = useRouter()
   const supabase = crearClienteNavegador()
   const esAdmin = rol === 'admin'
@@ -265,9 +270,29 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
           salidas: p.salidas,
           acuerdo_servicio: p.acuerdo_servicio,
           tiempos: p.tiempos,
+          proceso_cliente: p.proceso_cliente,
         }))
-        const { error: errPasos } = await supabase.from('pasos').insert(pasosData)
+        // Se piden los ids de vuelta para poder colgar los cargos de cada paso
+        const { data: pasosCreados, error: errPasos } = await supabase
+          .from('pasos').insert(pasosData).select('id, numero_orden')
         if (errPasos) throw errPasos
+
+        // Cargos responsables y de apoyo de cada actividad
+        const filasCargos = (pasosCreados ?? []).flatMap(pc => {
+          const original = pasos[pc.numero_orden - 1]
+          return (original?.cargos ?? []).map((c, i) => ({
+            paso_id: pc.id,
+            cargo_id: c.cargo_id,
+            tipo: c.tipo,
+            descripcion: c.descripcion.trim() || null,
+            gestion_apoyo_id: c.tipo === 'apoyo' ? (c.gestion_apoyo_id || null) : null,
+            orden: i + 1,
+          }))
+        })
+        if (filasCargos.length > 0) {
+          const { error: errCargos } = await supabase.from('paso_cargos').insert(filasCargos)
+          if (errCargos) throw errCargos
+        }
       }
 
       // Subir documentos nuevos
@@ -611,11 +636,14 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
                       onChange={e => actualizarPaso(i, 'descripcion', e.target.value)}
                     />
                   </div>
-                  <div className="field">
-                    <label className="field__label">Cargo responsable</label>
-                    <input className="ca-input ca-input--sm" placeholder="Ej: Analista de Selección"
-                      value={paso.cargo_responsable} onChange={e => actualizarPaso(i, 'cargo_responsable', e.target.value)} />
-                  </div>
+                  <SelectorCargos
+                    cargos={cargos}
+                    gestiones={gestiones}
+                    gestionActualId={gestionId}
+                    seleccion={paso.cargos}
+                    textoHeredado={paso.cargo_responsable}
+                    alCambiar={sig => setPasos(pasos.map((p, j) => j === i ? { ...p, cargos: sig } : p))}
+                  />
                   <div className="field">
                     <label className="field__label">Periodicidad</label>
                     <select className="ca-select ca-select--sm" value={paso.periodicidad} onChange={e => actualizarPaso(i, 'periodicidad', e.target.value)}>
@@ -642,6 +670,11 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
                     <label className="field__label">Acuerdo de servicio</label>
                     <input className="ca-input ca-input--sm" placeholder="SLA o compromiso"
                       value={paso.acuerdo_servicio} onChange={e => actualizarPaso(i, 'acuerdo_servicio', e.target.value)} />
+                  </div>
+                  <div className="field">
+                    <label className="field__label">Cargo o proceso cliente</label>
+                    <input className="ca-input ca-input--sm" placeholder="Quién recibe la salida"
+                      value={paso.proceso_cliente} onChange={e => actualizarPaso(i, 'proceso_cliente', e.target.value)} />
                   </div>
                 </div>
               </div>

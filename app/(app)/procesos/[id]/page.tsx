@@ -23,7 +23,7 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
       *,
       gestion:gestiones(id, nombre, descripcion, icono, color_soft, color_primary,
         lider:usuarios!gestiones_lider_id_fkey(id, nombre, correo)),
-      pasos(id, numero_orden, nombre, descripcion, cargo_responsable, entradas, periodicidad, salidas, acuerdo_servicio, tiempos),
+      pasos(id, numero_orden, nombre, descripcion, cargo_responsable, entradas, periodicidad, salidas, acuerdo_servicio, tiempos, proceso_cliente, paso_cargos(tipo, descripcion, orden, cargo:cargos(nombre), gestion_apoyo:gestiones(id, nombre))),
       documentos(id, nombre, tipo_archivo, tamano_bytes, storage_path),
       tipo_documento:tipos_documento(nombre)
     `)

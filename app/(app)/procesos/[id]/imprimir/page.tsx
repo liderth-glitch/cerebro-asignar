@@ -24,6 +24,17 @@ interface PasoDoc {
   salidas: string | null
   acuerdo_servicio: string | null
   tiempos: string | null
+  proceso_cliente: string | null
+  paso_cargos: {
+    tipo: string; descripcion: string | null; orden: number
+    cargo: { nombre: string } | { nombre: string }[] | null
+    gestion_apoyo: { nombre: string } | { nombre: string }[] | null
+  }[] | null
+}
+
+/** Supabase devuelve las relaciones como arrays */
+function unoRel<T>(v: T | T[] | null): T | null {
+  return Array.isArray(v) ? (v[0] ?? null) : v
 }
 
 export default async function PaginaImprimirProceso({ params }: { params: Promise<{ id: string }> }) {
@@ -36,7 +47,7 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
     .select(`
       *,
       gestion:gestiones(id, nombre),
-      pasos(id, numero_orden, nombre, descripcion, cargo_responsable, entradas, periodicidad, salidas, acuerdo_servicio, tiempos),
+      pasos(id, numero_orden, nombre, descripcion, cargo_responsable, entradas, periodicidad, salidas, acuerdo_servicio, tiempos, proceso_cliente, paso_cargos(tipo, descripcion, orden, cargo:cargos(nombre), gestion_apoyo:gestiones(nombre))),
       documentos(id, nombre, tipo_archivo),
       tipo_documento:tipos_documento(nombre, prefijo)
     `)
@@ -198,41 +209,68 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
         ) : pasos.length > 0 ? (
           <section className="doc-seccion">
             <h2>{nx()}. Desarrollo del procedimiento</h2>
-            {(
-              <table className="doc-tabla">
+            {/* Columnas exactas del formato oficial de Calidad */}
+            <div className="doc-scroll">
+              <table className="doc-tabla doc-tabla--ancha">
                 <thead>
                   <tr>
                     <th className="doc-tabla__num">Nº</th>
-                    <th style={{ width: '46%' }}>Actividad</th>
-                    <th style={{ width: '22%' }}>Responsable</th>
-                    <th>Entradas / Salidas</th>
+                    <th style={{ width: '13%' }}>Entradas</th>
+                    <th style={{ width: '14%' }}>Actividades</th>
+                    <th style={{ width: '27%' }}>Descripción</th>
+                    <th style={{ width: '9%' }}>Periodicidad</th>
+                    <th style={{ width: '14%' }}>Salidas – Entregables</th>
+                    <th style={{ width: '10%' }}>Acuerdo de servicio</th>
+                    <th style={{ width: '9%' }}>Cargo o proceso cliente</th>
+                    <th style={{ width: '8%' }}>Tiempo</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {pasos.map((p, i) => (
-                    <tr key={p.id}>
-                      <td className="doc-tabla__num">{i + 1}</td>
-                      <td>
-                        {p.nombre && <div style={{ fontWeight: 700, marginBottom: 2 }}>{p.nombre}</div>}
-                        <div>{p.descripcion || '—'}</div>
-                        {(p.periodicidad || p.tiempos || p.acuerdo_servicio) && (
-                          <div className="doc-dato" style={{ marginTop: 4 }}>
-                            {p.periodicidad && <><b>Periodicidad:</b> {p.periodicidad}. </>}
-                            {p.tiempos && <><b>Tiempo:</b> {p.tiempos}. </>}
-                            {p.acuerdo_servicio && <><b>Acuerdo:</b> {p.acuerdo_servicio}.</>}
-                          </div>
-                        )}
-                      </td>
-                      <td>{p.cargo_responsable || '—'}</td>
-                      <td className="doc-dato">
-                        <div><b>Entradas:</b> {p.entradas || '—'}</div>
-                        <div><b>Salidas:</b> {p.salidas || '—'}</div>
-                      </td>
-                    </tr>
-                  ))}
+                  {pasos.map((p, i) => {
+                    const cargos = [...(p.paso_cargos ?? [])].sort((a, b) => a.orden - b.orden)
+                    return (
+                      <tr key={p.id}>
+                        <td className="doc-tabla__num">{i + 1}</td>
+                        <td>{p.entradas || '—'}</td>
+                        <td>{p.nombre || '—'}</td>
+                        <td>
+                          {/* Un bloque por cargo: "Cargo: qué hace, cómo, dónde y cuándo" */}
+                          {cargos.length > 0 ? (
+                            <>
+                              {cargos.map((c, j) => {
+                                const nom = unoRel(c.cargo)?.nombre
+                                const g = unoRel(c.gestion_apoyo)
+                                if (!nom) return null
+                                return (
+                                  <div key={j} style={{ marginBottom: 4 }}>
+                                    <b>{nom}</b>
+                                    {c.tipo === 'apoyo' && (
+                                      <span className="doc-dato"> · apoyo{g ? ` de ${g.nombre}` : ''}</span>
+                                    )}
+                                    {c.descripcion ? <>: {c.descripcion}</> : null}
+                                  </div>
+                                )
+                              })}
+                              {p.descripcion && <div>{p.descripcion}</div>}
+                            </>
+                          ) : (
+                            <>
+                              {p.cargo_responsable && <div><b>{p.cargo_responsable}</b></div>}
+                              <div>{p.descripcion || '—'}</div>
+                            </>
+                          )}
+                        </td>
+                        <td>{p.periodicidad || '—'}</td>
+                        <td>{p.salidas || '—'}</td>
+                        <td>{p.acuerdo_servicio || '—'}</td>
+                        <td>{p.proceso_cliente || '—'}</td>
+                        <td>{p.tiempos || '—'}</td>
+                      </tr>
+                    )
+                  })}
                 </tbody>
               </table>
-            )}
+            </div>
           </section>
         ) : null}
 
