@@ -343,7 +343,15 @@ Causas del desajuste, para decidir con John y Diana:
 
 El editor marca cada paso sin homologar mostrando el texto anterior, para resolverlo sobre la marcha.
 
-- [ ] Decidir con John/Diana: qué cargos faltan crear y qué hacer con los valores que no son cargos | Asignado: `Simón`
+- [x] **Resuelto por Simón (2026-07-23)** con el `Listado personal (43).xlsx`:
+  1. **Nomenclatura** — los nombres del Excel *son* los del catálogo. Sincronizado todo el personal: 139 activos, 4 inactivados, 6 altas, cargo actualizado a todos. Creados los 2 cargos que faltaban (`Asistente de Vinculacion`, `Programador de Servicio`) → catálogo en 57
+  2. **Gerentes** — ya existían, pero como *"Gerencia X"*: `Gerencia General` (Sandra), `Gerencia Administrativa` (Jorge), `Gerencia Financiera`. En los procedimientos se escriben "Gerente general" → al homologar se mapean a estos
+  3. **Valores que no son cargos** — **no se crean como cargos**:
+     - `Cliente` / `Cliente externo` → es el cliente; basta reconocerlo como externo
+     - `COPASST` → comité de SST, no cargo. Va como **proceso en SST con cargos transversales** (participan personas de otras gestiones)
+     - `Coordinadores` → se refiere a los coordinadores en general, no a uno específico
+- [ ] Modelar en `paso_cargos` los actores que no son cargos (cliente / comité / genérico) | Asignado: ``
+- [ ] Manuales de cargo: están en la carpeta de TH «manuales de cargo», **desactualizados** — sirven de base y de formato | Asignado: ``
 - [ ] Panel de homologación masiva (mapear los 103 pasos de una) | Asignado: ``
 
 ### Ideas nuevas de la reunión (ver artefacto del layout)
