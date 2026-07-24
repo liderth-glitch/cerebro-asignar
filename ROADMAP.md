@@ -352,7 +352,10 @@ El editor marca cada paso sin homologar mostrando el texto anterior, para resolv
      - `Coordinadores` → se refiere a los coordinadores en general, no a uno específico
 - [ ] Modelar en `paso_cargos` los actores que no son cargos (cliente / comité / genérico) | Asignado: ``
 - [ ] Manuales de cargo: están en la carpeta de TH «manuales de cargo», **desactualizados** — sirven de base y de formato | Asignado: ``
-- [ ] Panel de homologación masiva (mapear los 103 pasos de una) | Asignado: ``
+- [x] **Panel de homologación** `/admin/homologacion` (Claude-Simon): resuelve cada texto libre una vez y lo aplica a todas sus actividades. Tabla `cargo_homologacion` + RPC `homologar_cargo` (SECURITY DEFINER) que crea los `paso_cargos` de golpe. Marca "es un cargo" (→ catálogo) o "no es un cargo" (cliente / comité / genérico)
+  - Adelantados los inequívocos: 5 exactos + 3 de redacción (Psicologa→Psicologos, Oficial de cumplimiento→Oficial Cumplimiento, Auditor interno→Auditor Control Interno) + 8 no-cargos (Cliente, COPASST, Coordinadores, Gestión de X…). **61 enlaces creados**
+  - **Decisiones de Simón aplicadas (2026-07-23):** analista compensación→Asistente+Auxiliar · analista selección→Reclutador+Psicólogos · analista seg. social→Asistente Seg. Social · coordinador selección→Líder selección · coordinador servicio→Líder Nac Servicio+Líder Operativo · **Gerente de SST→no existe, eliminar** · gerentes/directores→Gerencia General/Administrativa, Gerente de Operaciones (Silvia), Director Operativo y Comercial (Alfonso) · Gestión de X→no-cargo. **214 enlaces**
+  - **Quedan 9 pendientes** genuinamente inciertos (Analista de SST, Coordinador de vinculación, Líder de comunicación y mercadeo, Médico ocupacional, Recepcionista, Prospecto, Trabajador, Representante de trabajadores) → se resuelven en el panel
 
 ### Ideas nuevas de la reunión (ver artefacto del layout)
 - [ ] **Manual de cargo automático** — abrir un cargo trae todas sus actividades. Ya viable gracias a `paso_cargos`. = Etapa 18 | Asignado: ``
