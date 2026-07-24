@@ -306,7 +306,7 @@ Definiciones que **modifican o amplían** lo ya construido. Fuente: `Proyecto_Ce
 
 Los perfiles **ya están construidos** fuera de la plataforma; requieren revisión y montaje.
 
-- [ ] Modelo de perfil de cargo enlazado a `cargos` y a los procesos donde participa | Asignado: ``
+- [x] **Manual de cargo automático** (Claude-Simon): `/cargos` lista + `/cargos/[id]` arma solo las funciones desde `paso_cargos`. Cada actividad donde el cargo es responsable o de apoyo se recoge agrupada por gestión→proceso, con periodicidad, entradas/salidas, tiempo y enlace al procedimiento. Solo cuenta procesos **publicados**. Sidebar «Manuales de cargo» + enlace desde el cargo en cada perfil. **Se actualiza solo cuando cambia un procedimiento** (lo que pidió John)
 - [ ] Importar los perfiles existentes | Asignado: ``
 - [ ] **Inactivación (no borrado)** del perfil cuando el cargo desaparece, con alerta al líder, TH y Control Interno | Asignado: ``
 - [ ] Encadenamiento: al cambiar un procedimiento, marcar los perfiles de cargo afectados | Asignado: ``

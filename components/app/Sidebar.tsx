@@ -69,6 +69,11 @@ export default function Sidebar({ rol, aprobacionesPendientes = 0, gestionId }: 
           </Link>
         )}
 
+        <Link href="/cargos" className={`nav-item ${activa('/cargos') ? 'is-active' : ''}`} onClick={navegar}>
+          <Icono nombre="clipboard" className="nav-item__icon" /> Manuales de cargo
+          <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
+        </Link>
+
         <Link href="/desempeno" className={`nav-item ${activa('/desempeno') ? 'is-active' : ''}`} onClick={navegar}>
           <Icono nombre="target" className="nav-item__icon" /> Desempeño
           <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>

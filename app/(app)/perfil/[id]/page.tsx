@@ -40,7 +40,7 @@ export default async function PerfilUsuario({ params }: { params: Promise<{ id: 
   }
 
   const [{ data: cargo }, { data: gestion }, { data: jefe }, { data: reportes }] = await Promise.all([
-    u.cargo_id ? supabase.from('cargos').select('nombre, banda').eq('id', u.cargo_id).single() : Promise.resolve({ data: null }),
+    u.cargo_id ? supabase.from('cargos').select('id, nombre, banda').eq('id', u.cargo_id).single() : Promise.resolve({ data: null }),
     u.gestion_id ? supabase.from('gestiones').select('id, nombre').eq('id', u.gestion_id).single() : Promise.resolve({ data: null }),
     u.jefe_id ? supabase.from('directorio_usuarios').select('id, nombre, codigo_contrato').eq('id', u.jefe_id).single() : Promise.resolve({ data: null }),
     supabase.from('directorio_usuarios').select('id, nombre, codigo_contrato, cargo_id').eq('jefe_id', id).eq('activo', true).order('nombre'),
@@ -105,7 +105,11 @@ export default async function PerfilUsuario({ params }: { params: Promise<{ id: 
               <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>{u.nombre}</h1>
               <div className="hstack" style={{ gap: 10, marginTop: 6, fontSize: 13, color: 'var(--text-3)', flexWrap: 'wrap' }}>
                 {u.codigo_contrato && <span style={{ fontFamily: 'var(--font-mono)', fontWeight: 700 }}>{u.codigo_contrato}</span>}
-                {cargo?.nombre && <span>· {cargo.nombre}</span>}
+                {cargo?.nombre && (
+                  <Link href={`/cargos/${cargo.id}`} style={{ textDecoration: 'underline' }} title="Ver el manual de este cargo">
+                    · {cargo.nombre}
+                  </Link>
+                )}
                 {cargo?.banda && <span style={{ fontFamily: 'var(--font-mono)' }}>· {cargo.banda}</span>}
                 {gestion?.nombre && (
                   <>
