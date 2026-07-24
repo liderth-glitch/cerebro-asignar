@@ -352,7 +352,9 @@ El editor marca cada paso sin homologar mostrando el texto anterior, para resolv
      - `Coordinadores` → se refiere a los coordinadores en general, no a uno específico
 - [ ] Modelar en `paso_cargos` los actores que no son cargos (cliente / comité / genérico) | Asignado: ``
 - [ ] Manuales de cargo: están en la carpeta de TH «manuales de cargo», **desactualizados** — sirven de base y de formato | Asignado: ``
-- [ ] Panel de homologación masiva (mapear los 103 pasos de una) | Asignado: ``
+- [x] **Panel de homologación** `/admin/homologacion` (Claude-Simon): resuelve cada texto libre una vez y lo aplica a todas sus actividades. Tabla `cargo_homologacion` + RPC `homologar_cargo` (SECURITY DEFINER) que crea los `paso_cargos` de golpe. Marca "es un cargo" (→ catálogo) o "no es un cargo" (cliente / comité / genérico)
+  - Adelantados los inequívocos: 5 exactos + 3 de redacción (Psicologa→Psicologos, Oficial de cumplimiento→Oficial Cumplimiento, Auditor interno→Auditor Control Interno) + 8 no-cargos (Cliente, COPASST, Coordinadores, Gestión de X…). **61 enlaces creados**
+  - **Quedan 31 textos que requieren tu criterio** (ej. "Analista de compensación" → ¿Auxiliar o Asistente?; "Coordinador de selección" → ¿Líder?; "Gerente de SST" → ¿?). No los adiviné para no meter cargos errados en la documentación oficial
 
 ### Ideas nuevas de la reunión (ver artefacto del layout)
 - [ ] **Manual de cargo automático** — abrir un cargo trae todas sus actividades. Ya viable gracias a `paso_cargos`. = Etapa 18 | Asignado: ``
