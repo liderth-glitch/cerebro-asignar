@@ -116,6 +116,24 @@ export async function reemplazarAccionPdi(args: {
   return { ok: true }
 }
 
+export async function guardarObjetivosPdi(args: {
+  pdiId: string
+  evaluacionId: string
+  objetivoGeneral: string
+  objetivosSmart: string
+}) {
+  const supabase = await crearClienteServidor()
+  const objetivo_general = args.objetivoGeneral.trim() || null
+  const objetivos_smart = args.objetivosSmart.trim() || null
+  const { error } = await supabase
+    .from('pdi')
+    .update({ objetivo_general, objetivos_smart, updated_at: new Date().toISOString() })
+    .eq('id', args.pdiId)
+  if (error) return { error: error.message }
+  revalidatePath(`/desempeno/evaluaciones/${args.evaluacionId}/pdi`)
+  return { ok: true }
+}
+
 export async function enviarPdiAFirma(pdiId: string, evaluacionId: string) {
   const supabase = await crearClienteServidor()
   const { error } = await supabase
