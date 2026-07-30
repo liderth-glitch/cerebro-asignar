@@ -55,7 +55,7 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
 
   const { data: pdi } = await supabase
     .from('pdi')
-    .select('id, estado, fecha_acuerdo, proxima_revision, firma_colaborador, firma_jefe, firma_th, observaciones')
+    .select('id, estado, fecha_acuerdo, proxima_revision, firma_colaborador, firma_jefe, firma_th, observaciones, objetivo_general, objetivos_smart')
     .eq('evaluacion_id', evaluacionId).maybeSingle()
   if (!pdi) redirect(`/desempeno/evaluaciones/${evaluacionId}/pdi`)
 
@@ -118,9 +118,15 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
     }))
     .sort((a, b) => a.orden - b.orden)
 
-  const objetivoGeneral = compsConBrecha.length > 0
-    ? `Fortalecer las competencias de ${listaEs(compsConBrecha.map(c => c.nombre.toLowerCase()))}, con el fin de cerrar las brechas identificadas en la evaluación ${ciclo?.nombre ?? ''} y mejorar el desempeño en el cargo ${cargo?.nombre ?? ''}.`
-    : `Consolidar el desempeño de ${colaborador.nombre} en el cargo ${cargo?.nombre ?? ''}, sosteniendo los niveles alcanzados en la evaluación ${ciclo?.nombre ?? ''}.`
+  const objetivoGeneralGuardado = (pdi.objetivo_general as string | null) ?? ''
+  const objetivoGeneral = objetivoGeneralGuardado.trim()
+    ? objetivoGeneralGuardado.trim()
+    : compsConBrecha.length > 0
+      ? `Fortalecer las competencias de ${listaEs(compsConBrecha.map(c => c.nombre.toLowerCase()))}, con el fin de cerrar las brechas identificadas en la evaluación ${ciclo?.nombre ?? ''} y mejorar el desempeño en el cargo ${cargo?.nombre ?? ''}.`
+      : `Consolidar el desempeño de ${colaborador.nombre} en el cargo ${cargo?.nombre ?? ''}, sosteniendo los niveles alcanzados en la evaluación ${ciclo?.nombre ?? ''}.`
+
+  const objetivosSmart = (((pdi.objetivos_smart as string | null) ?? '').split('\n'))
+    .map(l => l.trim()).filter(Boolean)
 
   const filasPlan = (accionesPdi ?? []).map(a => {
     const cat = mapAccion.get(a.accion_id)
@@ -204,7 +210,18 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
         </section>
 
         <section className="doc-seccion">
-          <h2>2. Plan de desarrollo</h2>
+          <h2>2. Objetivos SMART</h2>
+          {objetivosSmart.length === 0 ? (
+            <p>Por definir con el líder inmediato.</p>
+          ) : (
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              {objetivosSmart.map((o, i) => <li key={i} style={{ marginBottom: 3 }}>{o}</li>)}
+            </ul>
+          )}
+        </section>
+
+        <section className="doc-seccion">
+          <h2>3. Plan de desarrollo</h2>
           {filasPlan.length === 0 ? (
             <p>Aún no se han definido acciones de desarrollo para este plan.</p>
           ) : (
@@ -234,7 +251,7 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
         </section>
 
         <section className="doc-seccion">
-          <h2>3. Seguimiento del plan</h2>
+          <h2>4. Seguimiento del plan</h2>
           <p>
             Se realizarán reuniones de seguimiento entre el colaborador y el líder inmediato para revisar avances,
             dificultades y cumplimiento de las acciones acordadas. La próxima revisión está prevista para el{' '}
@@ -244,7 +261,7 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
         </section>
 
         <section className="doc-seccion">
-          <h2>4. Aprobación y firmas</h2>
+          <h2>5. Aprobación y firmas</h2>
           <table className="doc-firmas">
             <thead>
               <tr>

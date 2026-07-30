@@ -6,6 +6,7 @@ import Topbar from '@/components/app/Topbar'
 import Icono from '@/components/app/Icono'
 import { BotonGenerarPdi, BotonEnviarAFirma } from './BotonesPdi'
 import EditorAccionPdi from './EditorAccionPdi'
+import EditorObjetivos from './EditorObjetivos'
 import PanelFirmas from './PanelFirmas'
 import Seguimiento from './Seguimiento'
 import type { TipoFirma } from './acciones'
@@ -50,7 +51,7 @@ export default async function PaginaPdi({ params }: { params: Promise<{ id: stri
 
   const { data: pdi } = await supabase
     .from('pdi')
-    .select('id, estado, fecha_acuerdo, proxima_revision, firma_colaborador, firma_jefe, firma_th, observaciones, updated_at')
+    .select('id, estado, fecha_acuerdo, proxima_revision, firma_colaborador, firma_jefe, firma_th, observaciones, objetivo_general, objetivos_smart, updated_at')
     .eq('evaluacion_id', evaluacionId)
     .maybeSingle()
 
@@ -108,6 +109,8 @@ export default async function PaginaPdi({ params }: { params: Promise<{ id: stri
             firmaJefe={pdi.firma_jefe}
             firmaTh={pdi.firma_th}
             observaciones={pdi.observaciones}
+            objetivoGeneral={pdi.objetivo_general}
+            objetivosSmart={pdi.objetivos_smart}
             idxBanda={idxBanda}
             editable={esAdmin || esJefeDirecto}
             esElColaborador={esElColaborador}
@@ -122,7 +125,7 @@ export default async function PaginaPdi({ params }: { params: Promise<{ id: stri
 
 async function PdiDetalle({
   pdiId, evaluacionId, estado, fechaAcuerdo, proximaRevision,
-  firmaColab, firmaJefe, firmaTh, observaciones, idxBanda, editable,
+  firmaColab, firmaJefe, firmaTh, observaciones, objetivoGeneral, objetivosSmart, idxBanda, editable,
   esElColaborador, esJefeDirecto, esAdmin,
 }: {
   pdiId: string
@@ -134,6 +137,8 @@ async function PdiDetalle({
   firmaJefe: string | null
   firmaTh: string | null
   observaciones: string | null
+  objetivoGeneral: string | null
+  objetivosSmart: string | null
   idxBanda: number
   editable: boolean
   esElColaborador: boolean
@@ -230,6 +235,14 @@ async function PdiDetalle({
           </div>
         </div>
       </section>
+
+      <EditorObjetivos
+        pdiId={pdiId}
+        evaluacionId={evaluacionId}
+        objetivoGeneral={objetivoGeneral}
+        objetivosSmart={objetivosSmart}
+        editable={editable && estado === 'borrador'}
+      />
 
       {enFirmaOVigente && (
         <PanelFirmas pdiId={pdiId} evaluacionId={evaluacionId} firmas={firmas} />
