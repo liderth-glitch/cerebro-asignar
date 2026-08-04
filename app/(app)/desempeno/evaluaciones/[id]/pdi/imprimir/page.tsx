@@ -75,9 +75,9 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
   // Acciones del plan + catálogo
   const { data: accionesPdi } = await supabase
     .from('pdi_acciones')
-    .select('id, accion_id, fecha_inicio, fecha_fin, responsable_seguimiento')
+    .select('id, accion_id, accion_libre, competencia_libre, tipo_libre, fecha_inicio, fecha_fin, responsable_seguimiento')
     .eq('pdi_id', pdi.id)
-  const accionIds = (accionesPdi ?? []).map(a => a.accion_id)
+  const accionIds = (accionesPdi ?? []).map(a => a.accion_id).filter((x): x is string => !!x)
   const { data: catalogo } = accionIds.length > 0
     ? await supabase.from('acciones_desarrollo').select('id, competencia, tipo, nombre').in('id', accionIds)
     : { data: [] as { id: string; competencia: string; tipo: string; nombre: string }[] }
@@ -129,10 +129,13 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
     .map(l => l.trim()).filter(Boolean)
 
   const filasPlan = (accionesPdi ?? []).map(a => {
-    const cat = mapAccion.get(a.accion_id)
+    const cat = a.accion_id ? mapAccion.get(a.accion_id) : null
+    const compCodigo = cat?.competencia ?? null
     return {
-      competencia: mapCompMeta.get(cat?.competencia ?? '')?.nombre ?? cat?.competencia ?? '—',
-      accion: cat?.nombre ?? '—',
+      competencia: compCodigo
+        ? (mapCompMeta.get(compCodigo)?.nombre ?? compCodigo)
+        : (a.competencia_libre ?? '—'),
+      accion: cat?.nombre ?? a.accion_libre ?? '—',
       responsable: a.responsable_seguimiento ?? '—',
       periodo: `${fFecha(a.fecha_inicio)} → ${fFecha(a.fecha_fin)}`,
     }

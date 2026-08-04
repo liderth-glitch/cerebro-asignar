@@ -7,6 +7,7 @@ import Icono from '@/components/app/Icono'
 import { BotonGenerarPdi, BotonEnviarAFirma } from './BotonesPdi'
 import EditorAccionPdi from './EditorAccionPdi'
 import EditorObjetivos from './EditorObjetivos'
+import { AgregarAccion, BotonBorrarAccion } from './AccionesExtra'
 import PanelFirmas from './PanelFirmas'
 import Seguimiento from './Seguimiento'
 import type { TipoFirma } from './acciones'
@@ -149,10 +150,10 @@ async function PdiDetalle({
 
   const { data: accionesPdi } = await supabase
     .from('pdi_acciones')
-    .select('id, accion_id, fecha_inicio, fecha_fin, responsable_seguimiento, estado')
+    .select('id, accion_id, accion_libre, competencia_libre, tipo_libre, fecha_inicio, fecha_fin, responsable_seguimiento, estado')
     .eq('pdi_id', pdiId)
 
-  const accionIds = (accionesPdi ?? []).map(a => a.accion_id)
+  const accionIds = (accionesPdi ?? []).map(a => a.accion_id).filter((x): x is string => !!x)
   const pdiAccionIds = (accionesPdi ?? []).map(a => a.id)
 
   const [{ data: catalogo }, { data: seguimientos }] = await Promise.all([
@@ -193,6 +194,15 @@ async function PdiDetalle({
     arr.push(c)
     candidatasPorComp.set(c.competencia, arr)
   }
+
+  // Catálogo completo aplicable a la banda, para agregar acciones nuevas
+  const { data: catalogoBandaRaw } = await supabase
+    .from('acciones_desarrollo')
+    .select('id, competencia, tipo, nombre, banda_min, banda_max')
+    .eq('activo', true)
+  const catalogoBanda = (catalogoBandaRaw ?? [])
+    .filter(c => idxBanda >= ORDEN_BANDA.indexOf(c.banda_min) && idxBanda <= ORDEN_BANDA.indexOf(c.banda_max))
+    .map(c => ({ id: c.id, nombre: c.nombre, competencia: c.competencia, tipo: c.tipo }))
 
   const puedeEditar = editable && estado === 'borrador'
   const puedeEnviar = editable && estado === 'borrador' && (accionesPdi?.length ?? 0) > 0
@@ -253,16 +263,20 @@ async function PdiDetalle({
         <div className="hstack" style={{ justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 14 }}>
           <div>
             <div className="page__eyebrow" style={{ marginBottom: 4 }}>Acciones del plan</div>
-            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Hasta 3 acciones de desarrollo</h2>
+            <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>Acciones de desarrollo</h2>
           </div>
           {puedeEnviar && <BotonEnviarAFirma pdiId={pdiId} evaluacionId={evaluacionId} />}
         </div>
 
         <div className="vstack" style={{ gap: 10 }}>
           {(accionesPdi ?? []).map((a, i) => {
-            const cat = mapAccion.get(a.accion_id)
-            if (!cat) return null
-            const candidatas = (candidatasPorComp.get(cat.competencia) ?? []).filter(c => c.id !== a.accion_id)
+            const cat = a.accion_id ? mapAccion.get(a.accion_id) : null
+            const esManual = !a.accion_id
+            const titulo = cat?.nombre ?? a.accion_libre ?? '—'
+            const tipo = cat?.tipo ?? a.tipo_libre
+            const competencia = cat?.competencia ?? a.competencia_libre
+            const detalleCat = cat ? `${cat.id} · ${cat.duracion ?? '—'} · Esfuerzo TH: ${cat.esfuerzo_th}` : 'Manual'
+            const candidatas = cat ? (candidatasPorComp.get(cat.competencia) ?? []).filter(c => c.id !== a.accion_id) : []
             const cortes = cortesPorAccion.get(a.id) ?? []
             const avanceActual = cortes.length > 0 ? cortes[cortes.length - 1].avance_pct : 0
             return (
@@ -277,12 +291,13 @@ async function PdiDetalle({
                   }}>{avanceActual === 100 ? '✓' : i + 1}</div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="hstack" style={{ gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-                      <strong style={{ fontSize: 14.5 }}>{cat.nombre}</strong>
-                      <span className="badge badge--neutral badge--no-dot" style={{ fontSize: 11 }}>{cat.tipo}</span>
-                      <span className="badge badge--neutral badge--no-dot" style={{ fontSize: 11 }}>{cat.competencia}</span>
+                      <strong style={{ fontSize: 14.5 }}>{titulo}</strong>
+                      {tipo && <span className="badge badge--neutral badge--no-dot" style={{ fontSize: 11 }}>{tipo}</span>}
+                      {competencia && <span className="badge badge--neutral badge--no-dot" style={{ fontSize: 11 }}>{competencia}</span>}
+                      {esManual && <span className="badge badge--primary badge--no-dot" style={{ fontSize: 11 }}>Manual</span>}
                     </div>
                     <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
-                      {cat.id} · {cat.duracion ?? '—'} · Esfuerzo TH: {cat.esfuerzo_th} · {a.fecha_inicio} → {a.fecha_fin} · {a.responsable_seguimiento}
+                      {detalleCat} · {a.fecha_inicio} → {a.fecha_fin} · {a.responsable_seguimiento}
                     </div>
                     {enFirmaOVigente && estado !== 'en_firma' && (
                       <Seguimiento
@@ -294,19 +309,39 @@ async function PdiDetalle({
                       />
                     )}
                   </div>
-                  <EditorAccionPdi
-                    pdiId={pdiId}
-                    pdiAccionId={a.id}
-                    accionActualId={a.accion_id}
-                    evaluacionId={evaluacionId}
-                    candidatas={candidatas ?? []}
-                    editable={puedeEditar}
-                  />
+                  {puedeEditar && (
+                    <div className="hstack" style={{ gap: 4, flexShrink: 0 }}>
+                      {cat && (
+                        <EditorAccionPdi
+                          pdiId={pdiId}
+                          pdiAccionId={a.id}
+                          accionActualId={a.accion_id!}
+                          evaluacionId={evaluacionId}
+                          candidatas={candidatas}
+                          editable={puedeEditar}
+                        />
+                      )}
+                      <BotonBorrarAccion pdiAccionId={a.id} evaluacionId={evaluacionId} />
+                    </div>
+                  )}
                 </div>
               </div>
             )
           })}
+          {(accionesPdi?.length ?? 0) === 0 && (
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>Este plan aún no tiene acciones.</p>
+          )}
         </div>
+
+        {puedeEditar && (
+          <AgregarAccion
+            pdiId={pdiId}
+            evaluacionId={evaluacionId}
+            catalogo={catalogoBanda}
+            fechaInicioDefault={fechaAcuerdo}
+            fechaFinDefault={proximaRevision}
+          />
+        )}
       </section>
 
       {observaciones && (
