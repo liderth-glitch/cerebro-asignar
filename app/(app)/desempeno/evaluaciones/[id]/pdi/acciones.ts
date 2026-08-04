@@ -134,6 +134,53 @@ export async function guardarObjetivosPdi(args: {
   return { ok: true }
 }
 
+export async function agregarAccionPdi(args: {
+  pdi_id: string
+  evaluacion_id: string
+  // Catálogo:
+  accion_id?: string | null
+  // Manual:
+  accion_libre?: string
+  competencia_libre?: string
+  tipo_libre?: string
+  // Comunes:
+  fecha_inicio: string
+  fecha_fin: string
+  responsable_seguimiento: string
+}) {
+  const supabase = await crearClienteServidor()
+
+  const esManual = !args.accion_id
+  if (esManual && !(args.accion_libre ?? '').trim()) {
+    return { error: 'Describe la acción de desarrollo' }
+  }
+  if (!args.fecha_inicio || !args.fecha_fin) return { error: 'Indica las fechas de inicio y fin' }
+  if (args.fecha_fin < args.fecha_inicio) return { error: 'La fecha fin no puede ser anterior al inicio' }
+
+  const { error } = await supabase.from('pdi_acciones').insert({
+    pdi_id: args.pdi_id,
+    accion_id: esManual ? null : args.accion_id,
+    accion_libre: esManual ? args.accion_libre!.trim() : null,
+    competencia_libre: esManual ? ((args.competencia_libre ?? '').trim() || null) : null,
+    tipo_libre: esManual ? ((args.tipo_libre ?? '').trim() || null) : null,
+    fecha_inicio: args.fecha_inicio,
+    fecha_fin: args.fecha_fin,
+    responsable_seguimiento: args.responsable_seguimiento || 'Jefe directo',
+    estado: 'Pendiente',
+  })
+  if (error) return { error: error.message }
+  revalidatePath(`/desempeno/evaluaciones/${args.evaluacion_id}/pdi`)
+  return { ok: true }
+}
+
+export async function eliminarAccionPdi(args: { pdi_accion_id: string; evaluacion_id: string }) {
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.from('pdi_acciones').delete().eq('id', args.pdi_accion_id)
+  if (error) return { error: error.message }
+  revalidatePath(`/desempeno/evaluaciones/${args.evaluacion_id}/pdi`)
+  return { ok: true }
+}
+
 export async function enviarPdiAFirma(pdiId: string, evaluacionId: string) {
   const supabase = await crearClienteServidor()
   const { error } = await supabase
