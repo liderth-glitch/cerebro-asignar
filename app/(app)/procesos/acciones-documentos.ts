@@ -6,10 +6,18 @@ import { crearClienteServidor } from '@/lib/supabase/server'
 
 const BUCKET = 'documentos-procesos'
 const MAX_BYTES = 20 * 1024 * 1024
-const EXT_OK = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'png', 'jpg', 'jpeg', 'webp', 'gif']
+const EXT_OK = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'webp', 'gif']
 
+/**
+ * Storage rechaza las llaves con caracteres no ASCII ("Invalid key"), así que
+ * las tildes y la ñ se transliteran antes de reemplazar lo que quede fuera.
+ */
 function sanitizar(nombre: string) {
-  return nombre.replace(/[^a-zA-Z0-9._-]/g, '_')
+  return nombre
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .replace(/[^a-zA-Z0-9._-]/g, '_')
+    .replace(/_+/g, '_')
 }
 
 export async function subirDocumentoProceso(formData: FormData) {
