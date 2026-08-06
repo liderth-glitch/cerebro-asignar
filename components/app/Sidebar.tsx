@@ -124,6 +124,10 @@ export default function Sidebar({ rol, aprobacionesPendientes = 0, gestionId }: 
             <Link href="/admin/usuarios" className={`nav-item ${activa('/admin/usuarios') ? 'is-active' : ''}`} onClick={navegar}>
               <Icono nombre="users" className="nav-item__icon" /> Gestionar Usuarios
             </Link>
+            <Link href="/admin/organigrama" className={`nav-item ${activa('/admin/organigrama') ? 'is-active' : ''}`} onClick={navegar}>
+              <Icono nombre="grid" className="nav-item__icon" /> Organigrama
+              <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
+            </Link>
             <Link href="/admin/politicas" className={`nav-item ${activa('/admin/politicas') ? 'is-active' : ''}`} onClick={navegar}>
               <Icono nombre="fileCheck" className="nav-item__icon" /> Gestionar Políticas
             </Link>
