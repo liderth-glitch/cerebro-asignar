@@ -42,7 +42,7 @@ export default async function PaginaNuevoPdi() {
         { etiqueta: 'Planes de desarrollo', href: '/desempeno/pdis' },
         { etiqueta: 'Nuevo' },
       ]} />
-      <main className="page fade-up">
+      <main className="page page--narrow fade-up">
         <div style={{ marginBottom: 20 }}>
           <Link href="/desempeno/pdis" className="btn btn--ghost btn--sm">
             <Icono nombre="chevronRight" className="icon icon--sm" style={{ transform: 'rotate(180deg)' }} /> Volver
