@@ -3,13 +3,12 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Icono from '@/components/app/Icono'
-import { guardarObjetivosPdi } from './acciones'
+import { guardarObjetivosPdi } from '../acciones'
 
 export default function EditorObjetivos({
-  pdiId, evaluacionId, objetivoGeneral, objetivosSmart, editable,
+  pdiId, objetivoGeneral, objetivosSmart, editable,
 }: {
   pdiId: string
-  evaluacionId: string
   objetivoGeneral: string | null
   objetivosSmart: string | null
   editable: boolean
@@ -27,7 +26,7 @@ export default function EditorObjetivos({
     setError('')
     startTransition(async () => {
       const res = await guardarObjetivosPdi({
-        pdiId, evaluacionId, objetivoGeneral: general, objetivosSmart: smart,
+        pdiId, objetivoGeneral: general, objetivosSmart: smart,
       })
       if (res.error) { setError(res.error); return }
       setEditando(false)

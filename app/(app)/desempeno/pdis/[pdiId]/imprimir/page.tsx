@@ -4,6 +4,7 @@ import Image from 'next/image'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { obtenerSesion } from '@/lib/sesion'
 import Icono from '@/components/app/Icono'
+import { nombreOrigen } from '@/lib/desempeno/origen'
 import {
   calcularReporte,
   type Plan, type Item, type Respuesta, type Ponderacion,
@@ -34,18 +35,22 @@ function nombreFirma(firma: string | null): string | null {
   return firma.split('—')[0].trim() || null
 }
 
-export default async function ImprimirActaPdi({ params }: { params: Promise<{ id: string }> }) {
-  const { id: evaluacionId } = await params
+export default async function ImprimirActaPdi({ params }: { params: Promise<{ pdiId: string }> }) {
+  const { pdiId } = await params
   const sesion = await obtenerSesion()
   const supabase = await crearClienteServidor()
 
-  const { data: evaluacion } = await supabase
-    .from('evaluaciones').select('id, ciclo_id, colaborador_id').eq('id', evaluacionId).single()
-  if (!evaluacion) notFound()
+  const { data: pdi } = await supabase
+    .from('pdi')
+    .select(`id, evaluacion_id, colaborador_id, estado, fecha_acuerdo, proxima_revision,
+      firma_colaborador, firma_jefe, firma_th, observaciones,
+      objetivo_general, objetivos_smart, origen, origen_detalle`)
+    .eq('id', pdiId).maybeSingle()
+  if (!pdi) notFound()
 
   const { data: colaborador } = await supabase
     .from('usuarios').select('id, nombre, codigo_contrato, cargo_id, jefe_id, sede')
-    .eq('id', evaluacion.colaborador_id).single()
+    .eq('id', pdi.colaborador_id).single()
   if (!colaborador) notFound()
 
   const esAdmin = sesion.rol === 'admin'
@@ -53,14 +58,11 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
   const esJefeDirecto = sesion.id === colaborador.jefe_id
   if (!esAdmin && !esElColaborador && !esJefeDirecto) redirect('/desempeno')
 
-  const { data: pdi } = await supabase
-    .from('pdi')
-    .select('id, estado, fecha_acuerdo, proxima_revision, firma_colaborador, firma_jefe, firma_th, observaciones, objetivo_general, objetivos_smart')
-    .eq('evaluacion_id', evaluacionId).maybeSingle()
-  if (!pdi) redirect(`/desempeno/evaluaciones/${evaluacionId}/pdi`)
-
-  const [{ data: ciclo }, { data: cargo }, { data: jefe }] = await Promise.all([
-    supabase.from('ciclos_evaluacion').select('id, nombre').eq('id', evaluacion.ciclo_id).single(),
+  const [{ data: evaluacion }, { data: cargo }, { data: jefe }] = await Promise.all([
+    pdi.evaluacion_id
+      ? supabase.from('evaluaciones').select('id, ciclo_id, ciclos_evaluacion:ciclo_id(id, nombre)')
+          .eq('id', pdi.evaluacion_id).maybeSingle()
+      : Promise.resolve({ data: null }),
     colaborador.cargo_id
       ? supabase.from('cargos').select('nombre, banda').eq('id', colaborador.cargo_id).single()
       : Promise.resolve({ data: null }),
@@ -68,9 +70,12 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
       ? supabase.from('usuarios').select('nombre, cargo:cargos(nombre)').eq('id', colaborador.jefe_id).single()
       : Promise.resolve({ data: null }),
   ])
+  const ciclo = uno(evaluacion?.ciclos_evaluacion as { id: string; nombre: string } | { id: string; nombre: string }[] | null)
   const banda = cargo?.banda ?? 'B1'
   const modalidad: Modalidad = ['B3', 'B4', 'B5'].includes(banda) ? '360°' : '270°'
   const jefeCargo = uno(jefe?.cargo as { nombre: string } | { nombre: string }[] | null)?.nombre ?? null
+  const origen = pdi.origen as string | null
+  const esDeCompetencias = origen === 'competencias' && !!pdi.evaluacion_id
 
   // Acciones del plan + catálogo
   const { data: accionesPdi } = await supabase
@@ -83,47 +88,51 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
     : { data: [] as { id: string; competencia: string; tipo: string; nombre: string }[] }
   const mapAccion = new Map((catalogo ?? []).map(a => [a.id, a]))
 
-  // Cálculo del reporte → brechas identificadas
-  const [
-    { data: planes }, { data: ponderaciones }, { data: nivelesEsperados },
-    { data: items }, { data: competenciasMeta },
-  ] = await Promise.all([
-    supabase.from('plan_evaluacion').select('id, tipo_evaluador').eq('evaluacion_id', evaluacionId),
-    supabase.from('ponderaciones_desempeno').select('modalidad, tipo_evaluador, peso'),
-    supabase.from('matriz_niveles_esperados').select('banda, competencia, nivel'),
-    supabase.from('items_cuestionario').select('id, competencia').eq('activo', true),
-    supabase.from('competencias').select('codigo, nombre, orden').order('orden'),
-  ])
-  const planIds = (planes ?? []).map(p => p.id)
-  const { data: respuestas } = planIds.length > 0
-    ? await supabase.from('respuestas').select('plan_evaluacion_id, item_id, calificacion').in('plan_evaluacion_id', planIds)
-    : { data: [] }
-
-  const reporte = calcularReporte({
-    banda, modalidad,
-    planes: (planes ?? []) as Plan[],
-    items: (items ?? []) as Item[],
-    respuestas: (respuestas ?? []) as Respuesta[],
-    ponderaciones: (ponderaciones ?? []) as Ponderacion[],
-    nivelesEsperados: (nivelesEsperados ?? []) as NivelEsperado[],
-  })
+  const { data: competenciasMeta } = await supabase
+    .from('competencias').select('codigo, nombre, orden').order('orden')
   const mapCompMeta = new Map((competenciasMeta ?? []).map(c => [c.codigo, c]))
-  const compsConBrecha = reporte.porCompetencia
-    .filter(c => c.prioridad && c.prioridad !== 'Cumple' && c.brecha !== null && c.brecha > 0)
-    .map(c => ({
-      nombre: mapCompMeta.get(c.competencia)?.nombre ?? c.competencia,
-      orden: mapCompMeta.get(c.competencia)?.orden ?? 0,
-      brecha: c.brecha as number,
-      prioridad: c.prioridad as string,
-    }))
-    .sort((a, b) => a.orden - b.orden)
+
+  // Brechas: sólo aplican cuando el PDI nace de una evaluación de competencias
+  let compsConBrecha: { nombre: string; orden: number; brecha: number; prioridad: string }[] = []
+  if (esDeCompetencias) {
+    const [
+      { data: planes }, { data: ponderaciones }, { data: nivelesEsperados }, { data: items },
+    ] = await Promise.all([
+      supabase.from('plan_evaluacion').select('id, tipo_evaluador').eq('evaluacion_id', pdi.evaluacion_id!),
+      supabase.from('ponderaciones_desempeno').select('modalidad, tipo_evaluador, peso'),
+      supabase.from('matriz_niveles_esperados').select('banda, competencia, nivel'),
+      supabase.from('items_cuestionario').select('id, competencia').eq('activo', true),
+    ])
+    const planIds = (planes ?? []).map(p => p.id)
+    const { data: respuestas } = planIds.length > 0
+      ? await supabase.from('respuestas').select('plan_evaluacion_id, item_id, calificacion').in('plan_evaluacion_id', planIds)
+      : { data: [] }
+
+    const reporte = calcularReporte({
+      banda, modalidad,
+      planes: (planes ?? []) as Plan[],
+      items: (items ?? []) as Item[],
+      respuestas: (respuestas ?? []) as Respuesta[],
+      ponderaciones: (ponderaciones ?? []) as Ponderacion[],
+      nivelesEsperados: (nivelesEsperados ?? []) as NivelEsperado[],
+    })
+    compsConBrecha = reporte.porCompetencia
+      .filter(c => c.prioridad && c.prioridad !== 'Cumple' && c.brecha !== null && c.brecha > 0)
+      .map(c => ({
+        nombre: mapCompMeta.get(c.competencia)?.nombre ?? c.competencia,
+        orden: mapCompMeta.get(c.competencia)?.orden ?? 0,
+        brecha: c.brecha as number,
+        prioridad: c.prioridad as string,
+      }))
+      .sort((a, b) => a.orden - b.orden)
+  }
 
   const objetivoGeneralGuardado = (pdi.objetivo_general as string | null) ?? ''
   const objetivoGeneral = objetivoGeneralGuardado.trim()
     ? objetivoGeneralGuardado.trim()
     : compsConBrecha.length > 0
       ? `Fortalecer las competencias de ${listaEs(compsConBrecha.map(c => c.nombre.toLowerCase()))}, con el fin de cerrar las brechas identificadas en la evaluación ${ciclo?.nombre ?? ''} y mejorar el desempeño en el cargo ${cargo?.nombre ?? ''}.`
-      : `Consolidar el desempeño de ${colaborador.nombre} en el cargo ${cargo?.nombre ?? ''}, sosteniendo los niveles alcanzados en la evaluación ${ciclo?.nombre ?? ''}.`
+      : `Fortalecer el desempeño de ${colaborador.nombre} en el cargo ${cargo?.nombre ?? ''}, a partir de ${nombreOrigen(origen).toLowerCase()}.`
 
   const objetivosSmart = (((pdi.objetivos_smart as string | null) ?? '').split('\n'))
     .map(l => l.trim()).filter(Boolean)
@@ -148,7 +157,7 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
   return (
     <main className="page fade-up">
       <div className="no-print hstack" style={{ gap: 10, marginBottom: 20, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-        <Link href={`/desempeno/evaluaciones/${evaluacionId}/pdi`} className="btn btn--ghost btn--sm">
+        <Link href={`/desempeno/pdis/${pdiId}`} className="btn btn--ghost btn--sm">
           <Icono nombre="chevronRight" className="icon icon--sm" style={{ transform: 'rotate(180deg)' }} /> Volver
         </Link>
         <div className="hstack" style={{ gap: 10, alignItems: 'center' }}>
@@ -168,12 +177,13 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
               </td>
               <td className="doc-head__titulo">
                 <strong>Plan de Desarrollo Individual — {cargo?.nombre ?? 'Colaborador'}</strong>
-                <span>{ciclo?.nombre} · {modalidad}</span>
+                <span>{ciclo?.nombre ? `${ciclo.nombre} · ${modalidad}` : nombreOrigen(origen)}</span>
               </td>
               <td className="doc-head__control" style={{ width: '32%' }}>
                 <div style={{ display: 'block' }}><b>Colaborador:</b> <span style={{ whiteSpace: 'normal' }}>{colaborador.nombre}</span></div>
                 {colaborador.codigo_contrato && <div><b>Contrato:</b> <span>{colaborador.codigo_contrato}</span></div>}
                 <div><b>Banda:</b> <span>{banda}</span></div>
+                <div><b>Origen:</b> <span>{nombreOrigen(origen)}</span></div>
                 <div><b>Acuerdo:</b> <span>{fFecha(pdi.fecha_acuerdo)}</span></div>
                 <div><b>Generado:</b> <span>{hoyBogota()}</span></div>
               </td>
@@ -187,28 +197,35 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ id
         </section>
 
         <section className="doc-seccion">
-          <h2>1. Brechas identificadas</h2>
-          {compsConBrecha.length === 0 ? (
-            <p>No se identificaron competencias por debajo del nivel esperado en esta evaluación.</p>
-          ) : (
-            <table className="doc-tabla">
-              <thead>
-                <tr>
-                  <th>Competencia</th>
-                  <th className="doc-tabla__num" style={{ width: 90 }}>Brecha</th>
-                  <th style={{ width: 140 }}>Prioridad</th>
-                </tr>
-              </thead>
-              <tbody>
-                {compsConBrecha.map((c, i) => (
-                  <tr key={i}>
-                    <td>{c.nombre}</td>
-                    <td className="doc-tabla__num">{c.brecha.toFixed(2)}</td>
-                    <td>{c.prioridad}</td>
+          <h2>1. {esDeCompetencias ? 'Brechas identificadas' : 'Origen y situación identificada'}</h2>
+          {esDeCompetencias ? (
+            compsConBrecha.length === 0 ? (
+              <p>No se identificaron competencias por debajo del nivel esperado en esta evaluación.</p>
+            ) : (
+              <table className="doc-tabla">
+                <thead>
+                  <tr>
+                    <th>Competencia</th>
+                    <th className="doc-tabla__num" style={{ width: 90 }}>Brecha</th>
+                    <th style={{ width: 140 }}>Prioridad</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {compsConBrecha.map((c, i) => (
+                    <tr key={i}>
+                      <td>{c.nombre}</td>
+                      <td className="doc-tabla__num">{c.brecha.toFixed(2)}</td>
+                      <td>{c.prioridad}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )
+          ) : (
+            <>
+              <p><b>Fuente:</b> {nombreOrigen(origen)}</p>
+              {pdi.origen_detalle && <p style={{ whiteSpace: 'pre-wrap' }}>{pdi.origen_detalle}</p>}
+            </>
           )}
         </section>
 

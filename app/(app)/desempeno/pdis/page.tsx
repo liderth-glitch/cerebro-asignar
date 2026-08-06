@@ -1,50 +1,34 @@
+import Link from 'next/link'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import { obtenerSesion } from '@/lib/sesion'
 import Topbar from '@/components/app/Topbar'
+import Icono from '@/components/app/Icono'
 import TablaPdis from './TablaPdis'
-
-interface PdiFila {
-  id: string
-  estado: string
-  fecha_acuerdo: string
-  proxima_revision: string
-  evaluacion_id: string
-  colaborador: { id: string; nombre: string; codigo_contrato: string | null } | null
-  ciclo: { id: string; nombre: string } | null
-  numAcciones: number
-  avancePromedio: number
-}
 
 export default async function PaginaPdis() {
   const sesion = await obtenerSesion()
   const supabase = await crearClienteServidor()
   const esAdmin = sesion.rol === 'admin'
+  const esLider = sesion.rol === 'lider'
 
+  // La RLS ya limita a: propios, de reportes directos, o todos si es admin
   const { data: pdisRaw } = await supabase
     .from('pdi')
-    .select(`
-      id, estado, fecha_acuerdo, proxima_revision,
-      evaluaciones:evaluacion_id ( id, colaborador_id, ciclo_id )
-    `)
+    .select('id, estado, fecha_acuerdo, proxima_revision, origen, colaborador_id, evaluacion_id')
     .order('fecha_acuerdo', { ascending: false })
 
-  const pdis = (pdisRaw ?? []).map(p => {
-    const rawEval = p.evaluaciones as unknown as { id: string; colaborador_id: string; ciclo_id: string } | { id: string; colaborador_id: string; ciclo_id: string }[] | null
-    const evalObj = Array.isArray(rawEval) ? (rawEval[0] ?? null) : rawEval
-    return { ...p, evaluacion: evalObj }
-  })
-
-  const colabIds = pdis.map(p => p.evaluacion?.colaborador_id).filter((x): x is string => !!x)
-  const cicloIds = pdis.map(p => p.evaluacion?.ciclo_id).filter((x): x is string => !!x)
+  const pdis = pdisRaw ?? []
+  const colabIds = [...new Set(pdis.map(p => p.colaborador_id).filter((x): x is string => !!x))]
+  const evalIds = [...new Set(pdis.map(p => p.evaluacion_id).filter((x): x is string => !!x))]
   const pdiIds = pdis.map(p => p.id)
 
-  const [{ data: colabs }, { data: ciclos }, { data: pdiAcc }] = await Promise.all([
+  const [{ data: colabs }, { data: evals }, { data: pdiAcc }] = await Promise.all([
     colabIds.length > 0
-      ? supabase.from('usuarios').select('id, nombre, codigo_contrato, jefe_id').in('id', colabIds)
-      : Promise.resolve({ data: [] as { id: string; nombre: string; codigo_contrato: string | null; jefe_id: string | null }[] }),
-    cicloIds.length > 0
-      ? supabase.from('ciclos_evaluacion').select('id, nombre').in('id', cicloIds)
-      : Promise.resolve({ data: [] as { id: string; nombre: string }[] }),
+      ? supabase.from('usuarios').select('id, nombre, codigo_contrato').in('id', colabIds)
+      : Promise.resolve({ data: [] as { id: string; nombre: string; codigo_contrato: string | null }[] }),
+    evalIds.length > 0
+      ? supabase.from('evaluaciones').select('id, ciclo_id, ciclos_evaluacion:ciclo_id(id, nombre)').in('id', evalIds)
+      : Promise.resolve({ data: [] as { id: string; ciclo_id: string; ciclos_evaluacion: unknown }[] }),
     pdiIds.length > 0
       ? supabase.from('pdi_acciones').select('id, pdi_id').in('pdi_id', pdiIds)
       : Promise.resolve({ data: [] as { id: string; pdi_id: string }[] }),
@@ -56,9 +40,8 @@ export default async function PaginaPdis() {
     : { data: [] as { pdi_accion_id: string; avance_pct: number }[] }
 
   const ultimoAvancePorAcc = new Map<string, number>()
-  for (const s of seguim ?? []) {
-    ultimoAvancePorAcc.set(s.pdi_accion_id, s.avance_pct)
-  }
+  for (const s of seguim ?? []) ultimoAvancePorAcc.set(s.pdi_accion_id, s.avance_pct)
+
   const accionesPorPdi = new Map<string, string[]>()
   for (const a of pdiAcc ?? []) {
     const arr = accionesPorPdi.get(a.pdi_id) ?? []
@@ -67,39 +50,33 @@ export default async function PaginaPdis() {
   }
 
   const mapColab = new Map((colabs ?? []).map(c => [c.id, c]))
-  const mapCiclo = new Map((ciclos ?? []).map(c => [c.id, c]))
+  const mapCicloPorEval = new Map(
+    (evals ?? []).map(e => {
+      const raw = e.ciclos_evaluacion as unknown as { id: string; nombre: string }[] | { id: string; nombre: string } | null
+      return [e.id, Array.isArray(raw) ? (raw[0] ?? null) : raw]
+    }),
+  )
 
-  const filas: PdiFila[] = pdis.map(p => {
-    const colab = p.evaluacion?.colaborador_id ? mapColab.get(p.evaluacion.colaborador_id) : null
-    const ciclo = p.evaluacion?.ciclo_id ? mapCiclo.get(p.evaluacion.ciclo_id) : null
+  const filas = pdis.map(p => {
     const accIds = accionesPorPdi.get(p.id) ?? []
     const avances = accIds.map(id => ultimoAvancePorAcc.get(id) ?? 0)
     const avancePromedio = avances.length > 0 ? Math.round(avances.reduce((a, b) => a + b, 0) / avances.length) : 0
     return {
       id: p.id,
       estado: p.estado,
+      origen: p.origen as string | null,
       fecha_acuerdo: p.fecha_acuerdo,
       proxima_revision: p.proxima_revision,
-      evaluacion_id: p.evaluacion?.id ?? '',
-      colaborador: colab ?? null,
-      ciclo: ciclo ?? null,
+      colaborador: mapColab.get(p.colaborador_id) ?? null,
+      ciclo: p.evaluacion_id ? (mapCicloPorEval.get(p.evaluacion_id) ?? null) : null,
       numAcciones: accIds.length,
       avancePromedio,
     }
   })
 
-  // Filtrar por permisos si no es admin: solo los suyos o de sus reportes directos
-  const filasVisibles = esAdmin
-    ? filas
-    : filas.filter(f => {
-        if (!f.colaborador) return false
-        if (f.colaborador.id === sesion.id) return true
-        return (mapColab.get(f.colaborador.id)?.jefe_id === sesion.id)
-      })
-
-  const vigentes = filasVisibles.filter(f => f.estado === 'vigente' || f.estado === 'completado')
-  const enFirma = filasVisibles.filter(f => f.estado === 'en_firma')
-  const borradores = filasVisibles.filter(f => f.estado === 'borrador')
+  const vigentes = filas.filter(f => f.estado === 'vigente' || f.estado === 'completado')
+  const enFirma = filas.filter(f => f.estado === 'en_firma')
+  const borradores = filas.filter(f => f.estado === 'borrador')
   const avanceGlobal = vigentes.length > 0
     ? Math.round(vigentes.reduce((a, b) => a + b.avancePromedio, 0) / vigentes.length)
     : 0
@@ -108,32 +85,41 @@ export default async function PaginaPdis() {
     <>
       <Topbar usuario={sesion} migas={[
         { etiqueta: 'Desempeño', href: '/desempeno' },
-        { etiqueta: 'PDIs' },
+        { etiqueta: 'Planes de desarrollo' },
       ]} />
       <main className="page fade-up">
-        <div style={{ marginBottom: 24 }}>
-          <div className="page__eyebrow">Cumplimiento</div>
-          <h1 className="page__title">Planes de desarrollo</h1>
-          <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-3)' }}>
-            {esAdmin ? 'Todos los PDIs de la organización.' : 'PDIs tuyos y de tus reportes directos.'}
-          </p>
+        <div className="hstack" style={{ marginBottom: 24, justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
+          <div>
+            <div className="page__eyebrow">Cumplimiento</div>
+            <h1 className="page__title">Planes de desarrollo</h1>
+            <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-3)', maxWidth: 620 }}>
+              {esAdmin ? 'Todos los PDIs de la organización.' : 'PDIs tuyos y de tus reportes directos.'}
+              {' '}Confluyen aquí los planes que nacen de evaluaciones, procesos disciplinarios,
+              período de prueba y otros motivos.
+            </p>
+          </div>
+          {(esAdmin || esLider) && (
+            <Link href="/desempeno/pdis/nuevo" className="btn btn--primary btn--sm">
+              <Icono nombre="plus" className="icon icon--sm" /> Nuevo PDI
+            </Link>
+          )}
         </div>
 
         <div className="grid-stats" style={{ marginBottom: 24 }}>
-          <KpiCard num={filasVisibles.length} label="PDIs totales" />
+          <KpiCard num={filas.length} label="PDIs totales" />
           <KpiCard num={vigentes.length} label="Vigentes" color="var(--success-ink)" />
           <KpiCard num={enFirma.length} label="En firma" color="var(--warning-ink)" />
           <KpiCard num={`${avanceGlobal}%`} label="Avance promedio global" color="var(--on-primary-soft)" />
         </div>
 
-        {filasVisibles.length === 0 ? (
+        {filas.length === 0 ? (
           <section className="card" style={{ padding: 26, textAlign: 'center' }}>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-3)' }}>
               No hay PDIs para mostrar todavía.
             </p>
           </section>
         ) : (
-          <TablaPdis filas={filasVisibles} />
+          <TablaPdis filas={filas} />
         )}
 
         {borradores.length > 0 && (

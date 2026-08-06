@@ -183,14 +183,23 @@ Mide las competencias organizacionales de cada colaborador, compara contra el ni
 
 > El Plan de Desarrollo Individual deja de ser exclusivo de la evaluación de competencias y se vuelve el **embudo único** al que llegan varias fuentes. Cada PDI registra su **origen**. Reencuadra la Sub-etapa 3.E y absorbe el punto de comité "PDI unificado".
 
+**Cimientos (completado) | Claude-Simon**
+- [x] El PDI dejó de depender de la evaluación: `pdi.colaborador_id` desnormalizado, `evaluacion_id` nullable, `origen` + `origen_detalle` + `acta_origen_path`, con checks de integridad
+- [x] Funciones de RLS (`pdi_colaborador_id`, `pdi_jefe_id`) reescritas para no pasar por `evaluaciones`
+- [x] Ruta canónica propia `/desempeno/pdis/[pdiId]` (antes colgaba de `/evaluaciones/[id]/pdi`, que ahora es puente y redirige)
+- [x] Bucket privado `actas-pdi` + policy de INSERT en `pdi` para el jefe directo
+- [x] Lista de PDIs con columna y filtro por **origen**; dashboard (`MiPDI`, `SaludEquipo`) ya lee PDIs de cualquier fuente
+
 **Fuentes que pueden originar un PDI:**
-- [ ] **1. Evaluación por competencias** (ya existe). Genera sugerencias automáticas de acciones desde las brechas (ver Sub-etapa 3.F para las mejoras pendientes).
-- [ ] **2. Proceso disciplinario.** Desde un proceso disciplinario se puede **iniciar un PDI anclado** a ese proceso. Debe permitir **montar/subir el acta del proceso disciplinario** como parte del origen/evidencia.
-- [ ] **3. Período de prueba / desempeño.** Los períodos de prueba ya están contemplados en el plan de Cerebro Asignar; **al llegar a esa etapa revisarla bien.** La idea: cuando se haga la **evaluación de período de prueba al 2.º mes** del ingreso, que tenga la opción de **"crear PDI"** que lleve directo a la plataforma del plan.
-- [ ] **4. Otros llamados de atención / otro motivo.** Cualquier otra llamada de atención u origen que amerite crear un PDI (fuente genérica).
+- [x] **1. Evaluación por competencias.** Genera sugerencias automáticas de acciones desde las brechas (ver Sub-etapa 3.F para las mejoras pendientes)
+- [x] **2. Proceso disciplinario.** Se crea el PDI con origen "disciplinario", su detalle y **el acta subida** como evidencia
+  - [ ] Enganche directo *desde* el módulo disciplinario (botón "iniciar PDI" en el proceso) — **pendiente hasta que exista ese módulo**; hoy se crea desde `/desempeno/pdis/nuevo`
+- [x] **3. Período de prueba / desempeño.** Origen disponible con detalle y acta de soporte
+  - [ ] Botón **"crear PDI"** dentro de la evaluación de período de prueba al 2.º mes — **pendiente hasta que exista ese módulo**. Al llegar a esa etapa revisarla bien
+- [x] **4. Otros llamados de atención / otro motivo.** Fuente genérica con detalle y acta opcional
 
 **Mejoras a la interfaz del PDI:**
-- [ ] **Botón de descargar** el PDI con la **plantilla específica** (entregada por Simón — `Plan_Desarrollo_Completo_Psicologo_Seleccion.docx`). Estructura del acta a reproducir (reutilizar el patrón `doc-print` → PDF):
+- [x] **Botón de descargar** el PDI con la **plantilla específica** (entregada por Simón — `Plan_Desarrollo_Completo_Psicologo_Seleccion.docx`). Estructura del acta reproducida (patrón `doc-print` → PDF):
   - **Título:** "PLAN DE DESARROLLO INDIVIDUAL (PDI) — [CARGO]".
   - **Objetivo General** (párrafo).
   - **1. Brechas Identificadas** (lista). Vienen del origen del PDI (brechas de competencias, hallazgos del disciplinario, del período de prueba, etc.).
@@ -198,9 +207,10 @@ Mide las competencias organizacionales de cada colaborador, compara contra el ni
   - **3. Plan de Desarrollo** (tabla): `Competencia | Acciones de Desarrollo | Indicador | Responsable | Fecha`.
   - **4. Seguimiento del Plan** (párrafo): reuniones quincenales colaborador/líder; evaluación final al cierre (ej. 90 días).
   - **5. Aprobación y Firmas**: tres bloques — **Colaborador**, **Líder inmediato**, **Gestión Humana** (Nombre / Cargo / Fecha) para firma física, más la firma digital en plataforma.
-- [ ] Poder **incluir acciones de desarrollo manuales**, además de las sugeridas por el software. En competencias vienen las sugerencias automáticas, pero las otras fuentes (disciplinario, período de prueba, otros) pueden usar otros compromisos o actividades de desarrollo propios.
-- [ ] Agregar **Objetivos SMART** como **campo editable** del PDI (bloque propio, hoy no existe).
-- [ ] En la tabla del plan, el **Responsable** de cada acción se **asigna manualmente** (Colaborador / Líder / etc.), no automático.
+- [x] Poder **incluir acciones de desarrollo manuales**, además de las sugeridas por el software. En competencias vienen las sugerencias automáticas, pero las otras fuentes (disciplinario, período de prueba, otros) pueden usar otros compromisos o actividades de desarrollo propios
+- [x] Agregar **Objetivos SMART** como **campo editable** del PDI (más un objetivo general opcional; si se deja vacío el acta lo autogenera desde las brechas)
+- [x] En la tabla del plan, el **Responsable** de cada acción se **asigna manualmente** (Colaborador / Líder / etc.), no automático
+- [ ] Columna **Indicador** por acción en la tabla del plan (hoy sale "—" en el acta)
 
 ---
 

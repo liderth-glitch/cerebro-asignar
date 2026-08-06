@@ -2,7 +2,7 @@
 
 import { useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { firmarPdi, type TipoFirma } from './acciones'
+import { firmarPdi, type TipoFirma } from '../acciones'
 
 interface FirmaData {
   tipo: TipoFirma
@@ -13,10 +13,9 @@ interface FirmaData {
 }
 
 export default function PanelFirmas({
-  pdiId, evaluacionId, firmas,
+  pdiId, firmas,
 }: {
   pdiId: string
-  evaluacionId: string
   firmas: FirmaData[]
 }) {
   return (
@@ -24,7 +23,7 @@ export default function PanelFirmas({
       <div className="page__eyebrow" style={{ marginBottom: 10 }}>Firmas</div>
       <div className="grid-stats-3">
         {firmas.map(f => (
-          <TarjetaFirma key={f.tipo} pdiId={pdiId} evaluacionId={evaluacionId} data={f} />
+          <TarjetaFirma key={f.tipo} pdiId={pdiId} data={f} />
         ))}
       </div>
     </section>
@@ -32,10 +31,9 @@ export default function PanelFirmas({
 }
 
 function TarjetaFirma({
-  pdiId, evaluacionId, data,
+  pdiId, data,
 }: {
   pdiId: string
-  evaluacionId: string
   data: FirmaData
 }) {
   const [isPending, startTransition] = useTransition()
@@ -65,7 +63,7 @@ function TarjetaFirma({
               disabled={isPending}
               onClick={() => startTransition(async () => {
                 if (!confirm(`¿Confirmas la firma como ${data.label}?`)) return
-                const res = await firmarPdi({ pdiId, evaluacionId, tipo: data.tipo })
+                const res = await firmarPdi({ pdiId, tipo: data.tipo })
                 if (res.error) alert(res.error)
                 else router.refresh()
               })}
