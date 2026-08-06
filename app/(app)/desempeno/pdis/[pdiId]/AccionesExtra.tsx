@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Icono from '@/components/app/Icono'
-import { agregarAccionPdi, eliminarAccionPdi } from './acciones'
+import { agregarAccionPdi, eliminarAccionPdi } from '../acciones'
 
 interface CatalogoItem {
   id: string
@@ -12,7 +12,7 @@ interface CatalogoItem {
   tipo: string
 }
 
-export function BotonBorrarAccion({ pdiAccionId, evaluacionId }: { pdiAccionId: string; evaluacionId: string }) {
+export function BotonBorrarAccion({ pdiAccionId, pdiId }: { pdiAccionId: string; pdiId: string }) {
   const router = useRouter()
   const [pendiente, startTransition] = useTransition()
   return (
@@ -24,7 +24,7 @@ export function BotonBorrarAccion({ pdiAccionId, evaluacionId }: { pdiAccionId: 
       onClick={() => {
         if (!confirm('¿Quitar esta acción del plan?')) return
         startTransition(async () => {
-          const res = await eliminarAccionPdi({ pdi_accion_id: pdiAccionId, evaluacion_id: evaluacionId })
+          const res = await eliminarAccionPdi({ pdi_accion_id: pdiAccionId, pdi_id: pdiId })
           if (res?.error) alert(res.error)
           else router.refresh()
         })
@@ -36,10 +36,9 @@ export function BotonBorrarAccion({ pdiAccionId, evaluacionId }: { pdiAccionId: 
 }
 
 export function AgregarAccion({
-  pdiId, evaluacionId, catalogo, fechaInicioDefault, fechaFinDefault,
+  pdiId, catalogo, fechaInicioDefault, fechaFinDefault,
 }: {
   pdiId: string
-  evaluacionId: string
   catalogo: CatalogoItem[]
   fechaInicioDefault: string
   fechaFinDefault: string
@@ -76,7 +75,6 @@ export function AgregarAccion({
     startTransition(async () => {
       const res = await agregarAccionPdi({
         pdi_id: pdiId,
-        evaluacion_id: evaluacionId,
         accion_id: modo === 'catalogo' ? accionId : null,
         accion_libre: modo === 'manual' ? accionLibre : undefined,
         competencia_libre: modo === 'manual' ? competenciaLibre : undefined,

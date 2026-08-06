@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
-import { registrarSeguimiento } from './acciones'
+import { registrarSeguimiento } from '../acciones'
 
 interface Corte {
   fecha_corte: string
@@ -11,10 +11,10 @@ interface Corte {
 }
 
 export default function Seguimiento({
-  pdiAccionId, evaluacionId, cortes, avanceActual, puedeRegistrar,
+  pdiAccionId, pdiId, cortes, avanceActual, puedeRegistrar,
 }: {
   pdiAccionId: string
-  evaluacionId: string
+  pdiId: string
   cortes: Corte[]
   avanceActual: number
   puedeRegistrar: boolean
@@ -67,7 +67,7 @@ export default function Seguimiento({
               disabled={isPending}
               onClick={() => startTransition(async () => {
                 const res = await registrarSeguimiento({
-                  pdiAccionId, evaluacionId,
+                  pdiAccionId, pdiId,
                   fechaCorte: fecha, avancePct: avance, comentario,
                 })
                 if (res.error) alert(res.error)

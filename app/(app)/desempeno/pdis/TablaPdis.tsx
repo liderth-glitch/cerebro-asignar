@@ -2,12 +2,13 @@
 
 import { useState, useMemo } from 'react'
 import Link from 'next/link'
+import { nombreOrigen, claseBadgeOrigen, ORIGENES_PDI, etiquetaOrigen } from '@/lib/desempeno/origen'
 
 interface Fila {
   id: string
   estado: string
+  origen: string | null
   proxima_revision: string
-  evaluacion_id: string
   colaborador: { id: string; nombre: string; codigo_contrato: string | null } | null
   ciclo: { id: string; nombre: string } | null
   numAcciones: number
@@ -23,18 +24,20 @@ const norm = (s: string) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCa
 export default function TablaPdis({ filas }: { filas: Fila[] }) {
   const [q, setQ] = useState('')
   const [estado, setEstado] = useState('')
+  const [origen, setOrigen] = useState('')
 
   const vis = useMemo(() => {
     const qn = norm(q.trim())
     return filas.filter(f => {
       if (estado && f.estado !== estado) return false
+      if (origen && f.origen !== origen) return false
       if (qn) {
         const t = norm(`${f.colaborador?.nombre ?? ''} ${f.colaborador?.codigo_contrato ?? ''} ${f.ciclo?.nombre ?? ''}`)
         if (!t.includes(qn)) return false
       }
       return true
     })
-  }, [filas, q, estado])
+  }, [filas, q, estado, origen])
 
   return (
     <>
@@ -48,7 +51,11 @@ export default function TablaPdis({ filas }: { filas: Fila[] }) {
           <option value="vigente">Vigente</option>
           <option value="completado">Completado</option>
         </select>
-        {(q || estado) && <button className="btn btn--ghost btn--sm" onClick={() => { setQ(''); setEstado('') }}>Limpiar</button>}
+        <select className="input" value={origen} onChange={e => setOrigen(e.target.value)} style={{ maxWidth: 210 }}>
+          <option value="">Todos los orígenes</option>
+          {ORIGENES_PDI.map(o => <option key={o} value={o}>{etiquetaOrigen[o]}</option>)}
+        </select>
+        {(q || estado || origen) && <button className="btn btn--ghost btn--sm" onClick={() => { setQ(''); setEstado(''); setOrigen('') }}>Limpiar</button>}
         <span style={{ fontSize: 12.5, color: 'var(--text-3)', marginLeft: 'auto', alignSelf: 'center' }}>{vis.length} de {filas.length}</span>
       </div>
 
@@ -57,7 +64,7 @@ export default function TablaPdis({ filas }: { filas: Fila[] }) {
           <thead>
             <tr>
               <th>Colaborador</th>
-              <th>Ciclo</th>
+              <th style={{ width: 190 }}>Origen</th>
               <th style={{ width: 110 }}>Estado</th>
               <th style={{ width: 90, textAlign: 'center' }}>Acciones</th>
               <th style={{ width: 220 }}>Avance</th>
@@ -74,7 +81,10 @@ export default function TablaPdis({ filas }: { filas: Fila[] }) {
                     <div className="row-sub" style={{ fontFamily: 'var(--font-mono)' }}>{f.colaborador.codigo_contrato}</div>
                   )}
                 </td>
-                <td>{f.ciclo?.nombre ?? '—'}</td>
+                <td>
+                  <span className={`badge ${claseBadgeOrigen(f.origen)}`}>{nombreOrigen(f.origen)}</span>
+                  {f.ciclo?.nombre && <div className="row-sub" style={{ marginTop: 3 }}>{f.ciclo.nombre}</div>}
+                </td>
                 <td><span className={`badge ${badgeEstado[f.estado] ?? 'badge--neutral'}`}>{f.estado}</span></td>
                 <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)' }}>{f.numAcciones}</td>
                 <td>
@@ -86,7 +96,7 @@ export default function TablaPdis({ filas }: { filas: Fila[] }) {
                   </div>
                 </td>
                 <td style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5 }}>{f.proxima_revision}</td>
-                <td><Link href={`/desempeno/evaluaciones/${f.evaluacion_id}/pdi`} className="btn btn--ghost btn--sm">Ver</Link></td>
+                <td><Link href={`/desempeno/pdis/${f.id}`} className="btn btn--ghost btn--sm">Ver</Link></td>
               </tr>
             ))}
             {vis.length === 0 && (

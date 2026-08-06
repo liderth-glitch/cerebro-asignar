@@ -8,6 +8,22 @@ import {
   type Plan, type Item, type Respuesta, type Ponderacion,
   type NivelEsperado, type Accion, type Modalidad,
 } from '@/lib/desempeno/calculo'
+import { esOrigenPdi, type OrigenPdi } from '@/lib/desempeno/origen'
+
+/** Refresca la vista del PDI (ruta canónica) y la lista. */
+function revalidarPdi(pdiId: string) {
+  revalidatePath(`/desempeno/pdis/${pdiId}`)
+  revalidatePath('/desempeno/pdis')
+}
+
+function hoyISO() {
+  return new Date().toISOString().slice(0, 10)
+}
+function enMeses(meses: number) {
+  const d = new Date()
+  d.setMonth(d.getMonth() + meses)
+  return d.toISOString().slice(0, 10)
+}
 
 export async function generarPdiDesdeReporte(evaluacionId: string) {
   const supabase = await crearClienteServidor()
@@ -68,14 +84,15 @@ export async function generarPdiDesdeReporte(evaluacionId: string) {
   if (top3.length === 0) return { error: 'No hay acciones recomendadas (sin brechas o sin respuestas).' }
 
   // 3. Crear PDI
-  const hoy = new Date().toISOString().slice(0, 10)
-  const proximaRevision = new Date(); proximaRevision.setMonth(proximaRevision.getMonth() + 3)
-  const proxStr = proximaRevision.toISOString().slice(0, 10)
+  const hoy = hoyISO()
+  const proxStr = enMeses(3)
 
   const { data: pdi, error: errPdi } = await supabase
     .from('pdi')
     .insert({
       evaluacion_id: evaluacionId,
+      colaborador_id: evaluacion.colaborador_id,
+      origen: 'competencias',
       fecha_acuerdo: hoy,
       proxima_revision: proxStr,
       estado: 'borrador',
@@ -96,29 +113,65 @@ export async function generarPdiDesdeReporte(evaluacionId: string) {
   const { error: errAcc } = await supabase.from('pdi_acciones').insert(filas)
   if (errAcc) return { error: errAcc.message }
 
-  revalidatePath(`/desempeno/evaluaciones/${evaluacionId}/pdi`)
+  revalidarPdi(pdi.id)
   return { pdi_id: pdi.id }
 }
 
-export async function reemplazarAccionPdi(args: {
-  pdi_id: string
-  pdi_accion_id: string
-  nueva_accion_id: string
-  evaluacion_id: string
+/**
+ * Crea un PDI desde una fuente distinta a la evaluación de competencias:
+ * proceso disciplinario, período de prueba u otro motivo.
+ */
+export async function crearPdiManual(args: {
+  colaborador_id: string
+  origen: OrigenPdi
+  origen_detalle: string
+  acta_origen_path: string | null
+  fecha_acuerdo: string
+  proxima_revision: string
 }) {
   const supabase = await crearClienteServidor()
-  const { error } = await supabase
-    .from('pdi_acciones')
-    .update({ accion_id: args.nueva_accion_id })
-    .eq('id', args.pdi_accion_id)
-  if (error) return { error: error.message }
-  revalidatePath(`/desempeno/evaluaciones/${args.evaluacion_id}/pdi`)
-  return { ok: true }
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Sesión requerida' }
+
+  if (!args.colaborador_id) return { error: 'Elige el colaborador' }
+  if (!esOrigenPdi(args.origen) || args.origen === 'competencias') {
+    return { error: 'Origen no válido. La evaluación de competencias genera su PDI desde el reporte.' }
+  }
+  if (!args.fecha_acuerdo || !args.proxima_revision) return { error: 'Indica las fechas del plan' }
+  if (args.proxima_revision < args.fecha_acuerdo) {
+    return { error: 'La próxima revisión no puede ser anterior a la fecha de acuerdo' }
+  }
+
+  const { data: pdi, error } = await supabase
+    .from('pdi')
+    .insert({
+      evaluacion_id: null,
+      colaborador_id: args.colaborador_id,
+      origen: args.origen,
+      origen_detalle: args.origen_detalle.trim() || null,
+      acta_origen_path: args.acta_origen_path,
+      fecha_acuerdo: args.fecha_acuerdo,
+      proxima_revision: args.proxima_revision,
+      estado: 'borrador',
+      creado_por: user.id,
+    })
+    .select('id').single()
+  if (error || !pdi) return { error: error?.message ?? 'No se pudo crear el PDI' }
+
+  revalidatePath('/desempeno/pdis')
+  return { pdi_id: pdi.id }
+}
+
+/** URL firmada para consultar el acta que soporta el origen del PDI. */
+export async function urlActaOrigen(path: string) {
+  const supabase = await crearClienteServidor()
+  const { data, error } = await supabase.storage.from('actas-pdi').createSignedUrl(path, 600)
+  if (error || !data) return { error: error?.message ?? 'No se pudo abrir el acta' }
+  return { ok: true, url: data.signedUrl }
 }
 
 export async function guardarObjetivosPdi(args: {
   pdiId: string
-  evaluacionId: string
   objetivoGeneral: string
   objetivosSmart: string
 }) {
@@ -130,13 +183,27 @@ export async function guardarObjetivosPdi(args: {
     .update({ objetivo_general, objetivos_smart, updated_at: new Date().toISOString() })
     .eq('id', args.pdiId)
   if (error) return { error: error.message }
-  revalidatePath(`/desempeno/evaluaciones/${args.evaluacionId}/pdi`)
+  revalidarPdi(args.pdiId)
+  return { ok: true }
+}
+
+export async function reemplazarAccionPdi(args: {
+  pdi_id: string
+  pdi_accion_id: string
+  nueva_accion_id: string
+}) {
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase
+    .from('pdi_acciones')
+    .update({ accion_id: args.nueva_accion_id })
+    .eq('id', args.pdi_accion_id)
+  if (error) return { error: error.message }
+  revalidarPdi(args.pdi_id)
   return { ok: true }
 }
 
 export async function agregarAccionPdi(args: {
   pdi_id: string
-  evaluacion_id: string
   // Catálogo:
   accion_id?: string | null
   // Manual:
@@ -169,33 +236,33 @@ export async function agregarAccionPdi(args: {
     estado: 'Pendiente',
   })
   if (error) return { error: error.message }
-  revalidatePath(`/desempeno/evaluaciones/${args.evaluacion_id}/pdi`)
+  revalidarPdi(args.pdi_id)
   return { ok: true }
 }
 
-export async function eliminarAccionPdi(args: { pdi_accion_id: string; evaluacion_id: string }) {
+export async function eliminarAccionPdi(args: { pdi_accion_id: string; pdi_id: string }) {
   const supabase = await crearClienteServidor()
   const { error } = await supabase.from('pdi_acciones').delete().eq('id', args.pdi_accion_id)
   if (error) return { error: error.message }
-  revalidatePath(`/desempeno/evaluaciones/${args.evaluacion_id}/pdi`)
+  revalidarPdi(args.pdi_id)
   return { ok: true }
 }
 
-export async function enviarPdiAFirma(pdiId: string, evaluacionId: string) {
+export async function enviarPdiAFirma(pdiId: string) {
   const supabase = await crearClienteServidor()
   const { error } = await supabase
     .from('pdi')
     .update({ estado: 'en_firma', updated_at: new Date().toISOString() })
     .eq('id', pdiId)
   if (error) return { error: error.message }
-  revalidatePath(`/desempeno/evaluaciones/${evaluacionId}/pdi`)
+  revalidarPdi(pdiId)
   return { ok: true }
 }
 
 export type TipoFirma = 'colaborador' | 'jefe' | 'th'
 
-export async function firmarPdi(args: { pdiId: string; evaluacionId: string; tipo: TipoFirma }) {
-  const { pdiId, evaluacionId, tipo } = args
+export async function firmarPdi(args: { pdiId: string; tipo: TipoFirma }) {
+  const { pdiId, tipo } = args
   const supabase = await crearClienteServidor()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Sesión requerida' }
@@ -205,16 +272,13 @@ export async function firmarPdi(args: { pdiId: string; evaluacionId: string; tip
   if (!perfil) return { error: 'Perfil no encontrado' }
 
   const { data: pdi } = await supabase
-    .from('pdi').select('id, evaluacion_id, estado, firma_colaborador, firma_jefe, firma_th')
+    .from('pdi').select('id, colaborador_id, estado, firma_colaborador, firma_jefe, firma_th')
     .eq('id', pdiId).single()
   if (!pdi) return { error: 'PDI no encontrado' }
   if (pdi.estado !== 'en_firma' && pdi.estado !== 'vigente') return { error: 'El PDI no está en firma' }
 
-  const { data: evaluacion } = await supabase
-    .from('evaluaciones').select('colaborador_id').eq('id', pdi.evaluacion_id).single()
-  if (!evaluacion) return { error: 'Evaluación no encontrada' }
   const { data: colab } = await supabase
-    .from('usuarios').select('id, jefe_id').eq('id', evaluacion.colaborador_id).single()
+    .from('usuarios').select('id, jefe_id').eq('id', pdi.colaborador_id).single()
   if (!colab) return { error: 'Colaborador no encontrado' }
 
   if (tipo === 'colaborador' && perfil.id !== colab.id) return { error: 'Solo el colaborador puede firmar como colaborador' }
@@ -237,13 +301,13 @@ export async function firmarPdi(args: { pdiId: string; evaluacionId: string; tip
 
   const { error } = await supabase.from('pdi').update(patch).eq('id', pdiId)
   if (error) return { error: error.message }
-  revalidatePath(`/desempeno/evaluaciones/${evaluacionId}/pdi`)
+  revalidarPdi(pdiId)
   return { ok: true }
 }
 
 export async function registrarSeguimiento(args: {
   pdiAccionId: string
-  evaluacionId: string
+  pdiId: string
   fechaCorte: string
   avancePct: number
   comentario: string
@@ -267,6 +331,6 @@ export async function registrarSeguimiento(args: {
     await supabase.from('pdi_acciones').update({ estado: 'En curso' }).eq('id', args.pdiAccionId)
   }
 
-  revalidatePath(`/desempeno/evaluaciones/${args.evaluacionId}/pdi`)
+  revalidarPdi(args.pdiId)
   return { ok: true }
 }

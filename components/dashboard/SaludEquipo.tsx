@@ -80,21 +80,12 @@ export default async function SaludEquipo({ usuarioId, esAdmin }: Props) {
     }
   }
 
-  // 3. PDIs vigentes del equipo (via evaluaciones del colaborador)
-  const { data: evalsColab } = await supabase
-    .from('evaluaciones').select('id, colaborador_id').in('colaborador_id', equipoIds)
-  const evalPorColab = new Map<string, string[]>()
-  for (const e of evalsColab ?? []) {
-    const arr = evalPorColab.get(e.colaborador_id) ?? []
-    arr.push(e.id)
-    evalPorColab.set(e.colaborador_id, arr)
-  }
-  const todosEvalIds = (evalsColab ?? []).map(e => e.id)
-
-  const { data: pdis } = todosEvalIds.length > 0
-    ? await supabase.from('pdi').select('id, estado, evaluacion_id, proxima_revision')
-        .in('evaluacion_id', todosEvalIds).eq('estado', 'vigente')
-    : { data: [] as { id: string; estado: string; evaluacion_id: string; proxima_revision: string }[] }
+  // 3. PDIs vigentes del equipo (de cualquier origen: competencias, disciplinario, etc.)
+  const { data: pdis } = equipoIds.length > 0
+    ? await supabase.from('pdi').select('id, estado, colaborador_id, proxima_revision, fecha_acuerdo')
+        .in('colaborador_id', equipoIds).eq('estado', 'vigente')
+        .order('fecha_acuerdo', { ascending: false })
+    : { data: [] as { id: string; estado: string; colaborador_id: string; proxima_revision: string; fecha_acuerdo: string }[] }
   const pdiIds = (pdis ?? []).map(p => p.id)
 
   const { data: acciones } = pdiIds.length > 0
@@ -145,8 +136,7 @@ export default async function SaludEquipo({ usuarioId, esAdmin }: Props) {
     const miEval = miEvaluacionesEquipo.find(e => e.colaborador_id === m.id)?.estado ?? null
 
     // PDI vigente (más reciente)
-    const evalIdsMios = evalPorColab.get(m.id) ?? []
-    const pdiMio = (pdis ?? []).find(p => evalIdsMios.includes(p.evaluacion_id))
+    const pdiMio = (pdis ?? []).find(p => p.colaborador_id === m.id)
     let pdiAvance: number | null = null
     let pdiProxima: string | null = null
     if (pdiMio) {
