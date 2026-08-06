@@ -8,34 +8,38 @@ interface Props {
   esAdmin: boolean
 }
 
-/** Salud del equipo — 3 vistas: comités, desempeño y PDIs. Solo se muestra si
- *  el usuario lidera al menos una gestión (o es admin). Reusa la lógica ponderada
- *  del ranking de comités para consistencia. */
+/** Salud del equipo — 3 vistas: comités, desempeño y PDIs. Se muestra a quien
+ *  tenga equipo: reportes directos y/o las gestiones que lidera (admin ve todas).
+ *  Reusa la lógica ponderada del ranking de comités para consistencia. */
 export default async function SaludEquipo({ usuarioId, esAdmin }: Props) {
   const supabase = await crearClienteServidor()
 
-  // Gestiones que lidera (o todas activas si admin)
+  // Gestiones que lidera (o todas activas si admin). Puede no liderar ninguna y
+  // aun así tener equipo por reportes directos, así que esto no corta el flujo.
   const { data: gestionesLidera } = esAdmin
     ? await supabase.from('gestiones').select('id, nombre').eq('activa', true)
     : await supabase.from('gestiones').select('id, nombre').eq('lider_id', usuarioId).eq('activa', true)
   const gestionesIds = (gestionesLidera ?? []).map(g => g.id)
-  if (gestionesIds.length === 0) return null
 
   // Equipo: usuarios activos donde jefe_id = me OR gestion_id ∈ mis gestiones lideradas
   const [{ data: reportesDirectos }, { data: miembrosGestion }] = await Promise.all([
     supabase.from('usuarios')
       .select('id, nombre, codigo_contrato, gestion_id, jefe_id, activo')
       .eq('jefe_id', usuarioId).eq('activo', true),
-    supabase.from('usuarios')
-      .select('id, nombre, codigo_contrato, gestion_id, jefe_id, activo')
-      .in('gestion_id', gestionesIds).eq('activo', true),
+    gestionesIds.length > 0
+      ? supabase.from('usuarios')
+          .select('id, nombre, codigo_contrato, gestion_id, jefe_id, activo')
+          .in('gestion_id', gestionesIds).eq('activo', true)
+      : Promise.resolve({ data: [] as { id: string; nombre: string; codigo_contrato: string | null; gestion_id: string | null; jefe_id: string | null; activo: boolean }[] }),
   ])
 
   interface Miembro { id: string; nombre: string; codigo_contrato: string | null }
   const equipoMap = new Map<string, Miembro>()
+  const gestionesDelEquipo = new Set<string>(gestionesIds)
   for (const u of [...(reportesDirectos ?? []), ...(miembrosGestion ?? [])]) {
     if (u.id === usuarioId) continue
     equipoMap.set(u.id, { id: u.id, nombre: u.nombre, codigo_contrato: u.codigo_contrato })
+    if (u.gestion_id) gestionesDelEquipo.add(u.gestion_id)
   }
   const equipo = Array.from(equipoMap.values())
   if (equipo.length === 0) return null
@@ -45,9 +49,13 @@ export default async function SaludEquipo({ usuarioId, esAdmin }: Props) {
   const anioActual = hoy.getFullYear()
   const { semana: semanaActual } = semanaISOde(hoy)
 
-  // 1. COMITES del año en las gestiones que lidera
-  const { data: comitesAnio } = await supabase
-    .from('comites').select('id, semana_iso').in('gestion_id', gestionesIds).eq('anio', anioActual)
+  // 1. COMITES del año en las gestiones donde está el equipo (no solo las lideradas
+  //    formalmente: si el equipo son reportes directos, sus comités también cuentan)
+  const idsComites = Array.from(gestionesDelEquipo)
+  const { data: comitesAnio } = idsComites.length > 0
+    ? await supabase
+        .from('comites').select('id, semana_iso').in('gestion_id', idsComites).eq('anio', anioActual)
+    : { data: [] as { id: string; semana_iso: number }[] }
   const comitesIds = (comitesAnio ?? []).map(c => c.id)
   const semanaPorComite = new Map((comitesAnio ?? []).map(c => [c.id, c.semana_iso]))
 
