@@ -10,17 +10,11 @@ interface Props {
 export default async function MiPDI({ usuarioId }: Props) {
   const supabase = await crearClienteServidor()
 
-  // Buscar el PDI vigente del usuario a través de su evaluación
-  const { data: evaluaciones } = await supabase
-    .from('evaluaciones').select('id, ciclo_id')
-    .eq('colaborador_id', usuarioId)
-  const evalIds = (evaluaciones ?? []).map(e => e.id)
-  if (evalIds.length === 0) return null
-
+  // PDI vigente del usuario, sea cual sea su origen (competencias, disciplinario, etc.)
   const { data: pdis } = await supabase
     .from('pdi')
-    .select('id, estado, fecha_acuerdo, proxima_revision, evaluacion_id')
-    .in('evaluacion_id', evalIds)
+    .select('id, estado, fecha_acuerdo, proxima_revision')
+    .eq('colaborador_id', usuarioId)
     .in('estado', ['vigente', 'en_firma'])
     .order('fecha_acuerdo', { ascending: false })
     .limit(1)
@@ -54,7 +48,7 @@ export default async function MiPDI({ usuarioId }: Props) {
     <section className="dash-section">
       <div className="section-header">
         <h2 className="section-title">Mi plan de desarrollo</h2>
-        <Link href={`/desempeno/evaluaciones/${pdi.evaluacion_id}/pdi`} className="btn btn--ghost btn--sm">
+        <Link href={`/desempeno/pdis/${pdi.id}`} className="btn btn--ghost btn--sm">
           Abrir <Icono nombre="arrowRight" className="icon icon--sm" />
         </Link>
       </div>

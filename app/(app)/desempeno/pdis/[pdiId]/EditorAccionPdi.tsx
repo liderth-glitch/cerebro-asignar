@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
-import { reemplazarAccionPdi } from './acciones'
+import { reemplazarAccionPdi } from '../acciones'
 
 interface AccionCat {
   id: string
@@ -18,14 +18,12 @@ export default function EditorAccionPdi({
   pdiId,
   pdiAccionId,
   accionActualId,
-  evaluacionId,
   candidatas,
   editable,
 }: {
   pdiId: string
   pdiAccionId: string
   accionActualId: string
-  evaluacionId: string
   candidatas: AccionCat[]
   editable: boolean
 }) {
@@ -92,7 +90,6 @@ export default function EditorAccionPdi({
                     pdi_id: pdiId,
                     pdi_accion_id: pdiAccionId,
                     nueva_accion_id: seleccion,
-                    evaluacion_id: evaluacionId,
                   })
                   setAbierto(false)
                 })}
