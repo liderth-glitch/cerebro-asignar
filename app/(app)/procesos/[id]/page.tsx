@@ -57,8 +57,9 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
   const liderRaw = g?.lider
   const lider = Array.isArray(liderRaw) ? (liderRaw[0] ?? null) : liderRaw
 
-  // Sube documentos: el líder de la gestión del proceso (lider_id) o admin — alineado con la RLS es_lider_gestion
-  const puedeSubirDocs = sesion.rol === 'admin' || (!!lider && lider.id === sesion.id)
+  // Sube documentos quien puede editar el proceso: admin, el líder designado de la
+  // gestión o un líder que pertenece a ella — alineado con la RLS es_lider_gestion
+  const puedeSubirDocs = puedeEditar || (!!lider && lider.id === sesion.id)
 
   const esCliente = proceso.es_proceso_cliente === true
   const contactos = (proceso.cliente_contactos as { nombre: string; telefono: string; correo: string }[]) ?? []

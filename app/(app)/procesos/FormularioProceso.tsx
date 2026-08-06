@@ -11,6 +11,7 @@ import type { Rol, EstadoProceso } from '@/types'
 import { plantillaDeTipo, tipoUsaPasos, pistaPorTipo, type SeccionDoc } from '@/lib/documentos/plantillas'
 import SelectorCargos, { type CargoCatalogo, type PasoCargo } from './SelectorCargos'
 import { proximaRevisionAnual } from '@/lib/documentos/vigencia'
+import { subirDocumentoProceso } from './acciones-documentos'
 
 interface Paso {
   id?: string
@@ -28,6 +29,10 @@ interface Paso {
   proceso_cliente: string
 }
 interface Documento { id?: string; nombre: string; tipo_archivo: string; url_descarga: string; tamano_bytes: number | null; archivo?: File }
+
+/** Debe coincidir con la validación de `subirDocumentoProceso`. */
+const EXT_DOC_OK = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'webp', 'gif']
+const MAX_DOC_BYTES = 20 * 1024 * 1024
 interface Contacto { nombre: string; telefono: string; correo: string }
 
 const pasoVacio = (orden: number): Paso => ({
@@ -181,14 +186,30 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
 
   function alSeleccionarArchivos(e: React.ChangeEvent<HTMLInputElement>) {
     const archivos = Array.from(e.target.files ?? [])
-    const nuevos: Documento[] = archivos.map(f => ({
-      nombre: f.name,
-      tipo_archivo: (f.name.split('.').pop() ?? 'pdf').toLowerCase(),
-      url_descarga: '',
-      tamano_bytes: f.size,
-      archivo: f,
-    }))
-    setDocumentos([...documentos, ...nuevos])
+    const rechazados: string[] = []
+    const nuevos: Documento[] = []
+
+    for (const f of archivos) {
+      const ext = (f.name.split('.').pop() ?? '').toLowerCase()
+      if (!EXT_DOC_OK.includes(ext)) {
+        rechazados.push(`${f.name} (tipo .${ext} no permitido)`)
+        continue
+      }
+      if (f.size > MAX_DOC_BYTES) {
+        rechazados.push(`${f.name} (supera 20 MB)`)
+        continue
+      }
+      nuevos.push({
+        nombre: f.name,
+        tipo_archivo: ext,
+        url_descarga: '',
+        tamano_bytes: f.size,
+        archivo: f,
+      })
+    }
+
+    setError(rechazados.length > 0 ? `No se agregaron: ${rechazados.join(', ')}.` : '')
+    if (nuevos.length > 0) setDocumentos([...documentos, ...nuevos])
     e.target.value = ''
   }
 
@@ -298,27 +319,17 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
         }
       }
 
-      // Subir documentos nuevos
+      // Subir documentos nuevos. Se delega en la server action, que sanitiza el
+      // nombre del archivo (Storage rechaza tildes y símbolos), valida tamaño y
+      // tipo, y guarda el storage_path que necesita la descarga por URL firmada.
       for (const doc of documentos) {
-        if (doc.archivo) {
-          const ruta = `${procesoId}/${Date.now()}-${doc.nombre}`
-          const { data: subida, error: errSubida } = await supabase.storage
-            .from('documentos-procesos')
-            .upload(ruta, doc.archivo)
-          if (errSubida) throw errSubida
-
-          const { data: { publicUrl } } = supabase.storage
-            .from('documentos-procesos')
-            .getPublicUrl(subida.path)
-
-          await supabase.from('documentos').insert({
-            proceso_id: procesoId,
-            nombre: doc.nombre,
-            tipo_archivo: doc.tipo_archivo,
-            url_descarga: publicUrl,
-            tamano_bytes: doc.tamano_bytes,
-          })
-        }
+        if (!doc.archivo) continue
+        const fd = new FormData()
+        fd.set('proceso_id', procesoId)
+        fd.set('archivo', doc.archivo)
+        fd.set('nombre', doc.nombre)
+        const res = await subirDocumentoProceso(fd)
+        if (res?.error) throw new Error(`No se pudo subir “${doc.nombre}”: ${res.error}`)
       }
 
       router.push(`/procesos/${procesoId}`)
@@ -699,8 +710,8 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
           }}>
             <Icono nombre="upload" className="icon icon--lg" style={{ color: 'var(--primary)' }} />
             <strong style={{ color: 'var(--text)' }}>Arrastra archivos aquí o haz clic para subir</strong>
-            <span style={{ fontSize: 12 }}>Acepta PDF, DOCX, XLSX, PPTX. Máx 20 MB por archivo.</span>
-            <input type="file" multiple accept=".pdf,.docx,.xlsx,.pptx" onChange={alSeleccionarArchivos} style={{ display: 'none' }} />
+            <span style={{ fontSize: 12 }}>Acepta PDF, Word, Excel, PowerPoint e imágenes. Máx 20 MB por archivo.</span>
+            <input type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,image/*" onChange={alSeleccionarArchivos} style={{ display: 'none' }} />
           </label>
 
           {documentos.length > 0 && (
