@@ -88,6 +88,12 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ pd
     : { data: [] as { id: string; competencia: string; tipo: string; nombre: string }[] }
   const mapAccion = new Map((catalogo ?? []).map(a => [a.id, a]))
 
+  const { data: compromisos } = await supabase
+    .from('pdi_compromisos')
+    .select('descripcion, fecha_limite, estado, observacion')
+    .eq('pdi_id', pdi.id)
+    .order('created_at')
+
   const { data: competenciasMeta } = await supabase
     .from('competencias').select('codigo, nombre, orden').order('orden')
   const mapCompMeta = new Map((competenciasMeta ?? []).map(c => [c.codigo, c]))
@@ -271,7 +277,42 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ pd
         </section>
 
         <section className="doc-seccion">
-          <h2>4. Seguimiento del plan</h2>
+          <h2>4. Compromisos individuales</h2>
+          {(compromisos ?? []).length === 0 ? (
+            <p>No se registraron compromisos individuales en este plan.</p>
+          ) : (
+            <>
+              <p>
+                Acuerdos que asume el colaborador. A diferencia de las acciones de desarrollo,
+                que son las herramientas que ofrece la empresa, su cumplimiento es responsabilidad
+                de quien los suscribe.
+              </p>
+              <table className="doc-tabla">
+                <thead>
+                  <tr>
+                    <th>Compromiso</th>
+                    <th style={{ width: '14%' }}>Fecha límite</th>
+                    <th style={{ width: '14%' }}>Estado</th>
+                    <th style={{ width: '24%' }}>Seguimiento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(compromisos ?? []).map((c, i) => (
+                    <tr key={i}>
+                      <td>{c.descripcion}</td>
+                      <td>{fFecha(c.fecha_limite)}</td>
+                      <td>{c.estado}</td>
+                      <td>{c.observacion || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+        </section>
+
+        <section className="doc-seccion">
+          <h2>5. Seguimiento del plan</h2>
           <p>
             Se realizarán reuniones de seguimiento entre el colaborador y el líder inmediato para revisar avances,
             dificultades y cumplimiento de las acciones acordadas. La próxima revisión está prevista para el{' '}
@@ -281,7 +322,7 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ pd
         </section>
 
         <section className="doc-seccion">
-          <h2>5. Aprobación y firmas</h2>
+          <h2>6. Aprobación y firmas</h2>
           <table className="doc-firmas">
             <thead>
               <tr>
