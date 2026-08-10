@@ -8,7 +8,7 @@ import { nombreOrigen, claseBadgeOrigen } from '@/lib/desempeno/origen'
 import { BotonEnviarAFirma } from './BotonesPdi'
 import EditorAccionPdi from './EditorAccionPdi'
 import EditorObjetivos from './EditorObjetivos'
-import { AgregarAccion, BotonBorrarAccion } from './AccionesExtra'
+import { AgregarAccion, BotonBorrarAccion, EditorIndicador } from './AccionesExtra'
 import Compromisos, { type Compromiso } from './Compromisos'
 import BotonActa from './BotonActa'
 import PanelFirmas from './PanelFirmas'
@@ -167,7 +167,7 @@ async function PdiDetalle({
 
   const { data: accionesPdi } = await supabase
     .from('pdi_acciones')
-    .select('id, accion_id, accion_libre, competencia_libre, tipo_libre, fecha_inicio, fecha_fin, responsable_seguimiento, estado')
+    .select('id, accion_id, accion_libre, competencia_libre, tipo_libre, indicador, fecha_inicio, fecha_fin, responsable_seguimiento, estado')
     .eq('pdi_id', pdiId)
 
   const { data: compromisos } = await supabase
@@ -323,6 +323,12 @@ async function PdiDetalle({
                     <div style={{ fontSize: 12.5, color: 'var(--text-3)' }}>
                       {detalleCat} · {a.fecha_inicio} → {a.fecha_fin} · {a.responsable_seguimiento}
                     </div>
+                    <EditorIndicador
+                      pdiAccionId={a.id}
+                      pdiId={pdiId}
+                      indicador={a.indicador}
+                      editable={puedeEditar}
+                    />
                     {enFirmaOVigente && estado !== 'en_firma' && (
                       <Seguimiento
                         pdiAccionId={a.id}

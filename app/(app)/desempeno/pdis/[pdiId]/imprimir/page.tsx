@@ -80,7 +80,7 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ pd
   // Acciones del plan + catálogo
   const { data: accionesPdi } = await supabase
     .from('pdi_acciones')
-    .select('id, accion_id, accion_libre, competencia_libre, tipo_libre, fecha_inicio, fecha_fin, responsable_seguimiento')
+    .select('id, accion_id, accion_libre, competencia_libre, tipo_libre, indicador, fecha_inicio, fecha_fin, responsable_seguimiento')
     .eq('pdi_id', pdi.id)
   const accionIds = (accionesPdi ?? []).map(a => a.accion_id).filter((x): x is string => !!x)
   const { data: catalogo } = accionIds.length > 0
@@ -151,6 +151,7 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ pd
         ? (mapCompMeta.get(compCodigo)?.nombre ?? compCodigo)
         : (a.competencia_libre ?? '—'),
       accion: cat?.nombre ?? a.accion_libre ?? '—',
+      indicador: a.indicador ?? '—',
       responsable: a.responsable_seguimiento ?? '—',
       periodo: `${fFecha(a.fecha_inicio)} → ${fFecha(a.fecha_fin)}`,
     }
@@ -266,7 +267,7 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ pd
                   <tr key={i}>
                     <td>{f.competencia}</td>
                     <td>{f.accion}</td>
-                    <td>—</td>
+                    <td>{f.indicador}</td>
                     <td>{f.responsable}</td>
                     <td>{f.periodo}</td>
                   </tr>

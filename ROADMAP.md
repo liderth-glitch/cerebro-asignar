@@ -213,7 +213,7 @@ Mide las competencias organizacionales de cada colaborador, compara contra el ni
 - [x] Poder **incluir acciones de desarrollo manuales**, además de las sugeridas por el software. En competencias vienen las sugerencias automáticas, pero las otras fuentes (disciplinario, período de prueba, otros) pueden usar otros compromisos o actividades de desarrollo propios
 - [x] Agregar **Objetivos SMART** como **campo editable** del PDI (más un objetivo general opcional; si se deja vacío el acta lo autogenera desde las brechas)
 - [x] En la tabla del plan, el **Responsable** de cada acción se **asigna manualmente** (Colaborador / Líder / etc.), no automático
-- [ ] Columna **Indicador** por acción en la tabla del plan (hoy sale "—" en el acta)
+- [x] Columna **Indicador** por acción en la tabla del plan: se captura al agregar la acción y se puede editar después desde la lista, porque las acciones que vienen del TOP 3 nacen sin él. Sale en el acta
 
 ---
 
