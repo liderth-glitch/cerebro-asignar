@@ -161,8 +161,11 @@ Mide las competencias organizacionales de cada colaborador, compara contra el ni
 - [ ] Revisar las 39 acciones actuales una a una; incluir la propuesta de **biblioteca (lecturas) digital/física** (requiere presupuesto a gerencia en la planeación de fin de año).
 - [ ] **Salvedad trabajo en equipo vs. colaboración:** las acciones de "apoyar en otra gestión" tienen riesgo laboral (persona sin el conocimiento técnico estorba; cargo de salario alto en tareas operativas). Requieren primero un **indicador de equipo / contribuciones del equipo** y claridad de roles antes de proponerse.
 
-**Compromisos individuales (falta construir):**
-- [ ] Agregar **compromisos individuales** al PDI, además de las acciones de desarrollo. Son acuerdos conductuales/normativos (ej. llegadas tarde, trato inadecuado que puede escalar a acoso laboral) que quedan por escrito con el jefe. Misma visual del PDI: "agregar compromiso" + seguimiento + descarga de acta + firma física y en plataforma. Liliana lo recomendó explícitamente para que la responsabilidad de mejorar quede en el colaborador, no en la empresa.
+**Compromisos individuales (completado) | Claude-Simon**
+- [x] Tabla `pdi_compromisos` (descripción, fecha límite, estado, observación, fecha de revisión) con la misma RLS que `pdi_acciones`: leen colaborador y jefe, escriben jefe y TH. Verificado que un tercero no ve nada
+- [x] Sección propia en el PDI, separada de las acciones de desarrollo: la empresa ofrece herramientas, el colaborador asume acuerdos
+- [x] Se agregan en borrador (el acta se firma con los compromisos ya acordados) y el **seguimiento lo califica el jefe o TH**, no el colaborador — un compromiso no se autocalifica como cumplido
+- [x] Sección "4. Compromisos individuales" en el acta descargable, con estado y seguimiento
 
 **Integración (refuerza el PDI unificado del comité):**
 - [ ] Confirmado el **embudo único de PDI**: procesos disciplinarios, período de prueba, retroalimentación técnica, evaluaciones de competencias y llamados de atención leves convergen en el mismo módulo, indicando el **origen** y con evidencias. (Ver punto de comité "PDI unificado".)

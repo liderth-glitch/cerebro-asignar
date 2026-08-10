@@ -248,6 +248,65 @@ export async function eliminarAccionPdi(args: { pdi_accion_id: string; pdi_id: s
   return { ok: true }
 }
 
+/**
+ * Compromisos individuales: lo que el colaborador se obliga a cumplir.
+ * Van aparte de las acciones de desarrollo, que son lo que ofrece la empresa.
+ */
+export async function agregarCompromisoPdi(args: {
+  pdi_id: string
+  descripcion: string
+  fecha_limite: string
+}) {
+  const supabase = await crearClienteServidor()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Sesión requerida' }
+
+  const descripcion = args.descripcion.trim()
+  if (!descripcion) return { error: 'Describe el compromiso' }
+
+  const { error } = await supabase.from('pdi_compromisos').insert({
+    pdi_id: args.pdi_id,
+    descripcion,
+    fecha_limite: args.fecha_limite || null,
+    estado: 'Pendiente',
+    creado_por: user.id,
+  })
+  if (error) return { error: error.message }
+  revalidarPdi(args.pdi_id)
+  return { ok: true }
+}
+
+export async function actualizarCompromisoPdi(args: {
+  compromiso_id: string
+  pdi_id: string
+  estado: string
+  observacion: string
+}) {
+  const supabase = await crearClienteServidor()
+  const ESTADOS = ['Pendiente', 'En curso', 'Cumplido', 'Incumplido']
+  if (!ESTADOS.includes(args.estado)) return { error: 'Estado no válido' }
+
+  const { error } = await supabase
+    .from('pdi_compromisos')
+    .update({
+      estado: args.estado,
+      observacion: args.observacion.trim() || null,
+      fecha_revision: new Date().toISOString().slice(0, 10),
+    })
+    .eq('id', args.compromiso_id)
+  if (error) return { error: error.message }
+  revalidarPdi(args.pdi_id)
+  return { ok: true }
+}
+
+export async function eliminarCompromisoPdi(args: { compromiso_id: string; pdi_id: string }) {
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase.from('pdi_compromisos').delete().eq('id', args.compromiso_id)
+  if (error) return { error: error.message }
+  revalidarPdi(args.pdi_id)
+  return { ok: true }
+}
+
 export async function enviarPdiAFirma(pdiId: string) {
   const supabase = await crearClienteServidor()
   const { error } = await supabase

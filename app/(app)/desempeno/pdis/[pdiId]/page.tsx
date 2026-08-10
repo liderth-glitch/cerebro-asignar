@@ -9,6 +9,7 @@ import { BotonEnviarAFirma } from './BotonesPdi'
 import EditorAccionPdi from './EditorAccionPdi'
 import EditorObjetivos from './EditorObjetivos'
 import { AgregarAccion, BotonBorrarAccion } from './AccionesExtra'
+import Compromisos, { type Compromiso } from './Compromisos'
 import BotonActa from './BotonActa'
 import PanelFirmas from './PanelFirmas'
 import Seguimiento from './Seguimiento'
@@ -168,6 +169,12 @@ async function PdiDetalle({
     .from('pdi_acciones')
     .select('id, accion_id, accion_libre, competencia_libre, tipo_libre, fecha_inicio, fecha_fin, responsable_seguimiento, estado')
     .eq('pdi_id', pdiId)
+
+  const { data: compromisos } = await supabase
+    .from('pdi_compromisos')
+    .select('id, descripcion, fecha_limite, estado, observacion, fecha_revision')
+    .eq('pdi_id', pdiId)
+    .order('created_at')
 
   const accionIds = (accionesPdi ?? []).map(a => a.accion_id).filter((x): x is string => !!x)
   const pdiAccionIds = (accionesPdi ?? []).map(a => a.id)
@@ -358,6 +365,14 @@ async function PdiDetalle({
           />
         )}
       </section>
+
+      <Compromisos
+        pdiId={pdiId}
+        compromisos={(compromisos ?? []) as Compromiso[]}
+        puedeAgregar={puedeEditar}
+        puedeSeguir={(esJefeDirecto || esAdmin) && (estado === 'vigente' || estado === 'completado')}
+        fechaLimiteDefault={proximaRevision}
+      />
 
       {observaciones && (
         <section className="card" style={{ padding: 18, marginBottom: 18 }}>
