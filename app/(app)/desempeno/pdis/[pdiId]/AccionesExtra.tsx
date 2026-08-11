@@ -3,7 +3,7 @@
 import { useState, useMemo, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import Icono from '@/components/app/Icono'
-import { agregarAccionPdi, eliminarAccionPdi } from '../acciones'
+import { agregarAccionPdi, eliminarAccionPdi, actualizarIndicadorAccion } from '../acciones'
 
 interface CatalogoItem {
   id: string
@@ -35,6 +35,55 @@ export function BotonBorrarAccion({ pdiAccionId, pdiId }: { pdiAccionId: string;
   )
 }
 
+/** Indicador de una acción ya creada. Las que vienen del TOP 3 nacen sin él. */
+export function EditorIndicador({ pdiAccionId, pdiId, indicador, editable }: {
+  pdiAccionId: string
+  pdiId: string
+  indicador: string | null
+  editable: boolean
+}) {
+  const router = useRouter()
+  const [editando, setEditando] = useState(false)
+  const [valor, setValor] = useState(indicador ?? '')
+  const [pendiente, startTransition] = useTransition()
+
+  if (!editando) {
+    return (
+      <div className="hstack" style={{ gap: 6, marginTop: 4, fontSize: 12.5, flexWrap: 'wrap' }}>
+        <span style={{ color: 'var(--text-3)' }}>Indicador:</span>
+        {indicador
+          ? <span>{indicador}</span>
+          : <span style={{ color: 'var(--text-3)', fontStyle: 'italic' }}>sin definir</span>}
+        {editable && (
+          <button type="button" className="btn btn--ghost btn--sm" style={{ padding: '0 6px' }}
+            onClick={() => setEditando(true)}>
+            <Icono nombre="edit" className="icon icon--sm" />
+          </button>
+        )}
+      </div>
+    )
+  }
+
+  return (
+    <div className="hstack" style={{ gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
+      <input className="ca-input ca-input--sm" value={valor} onChange={e => setValor(e.target.value)}
+        placeholder="Ej: 95% de compromisos entregados a tiempo" style={{ flex: 1, minWidth: 200 }} />
+      <button type="button" className="btn btn--primary btn--sm" disabled={pendiente}
+        onClick={() => startTransition(async () => {
+          const res = await actualizarIndicadorAccion({ pdi_accion_id: pdiAccionId, pdi_id: pdiId, indicador: valor })
+          if (res?.error) { alert(res.error); return }
+          setEditando(false); router.refresh()
+        })}>
+        {pendiente ? 'Guardando…' : 'Guardar'}
+      </button>
+      <button type="button" className="btn btn--ghost btn--sm" disabled={pendiente}
+        onClick={() => { setEditando(false); setValor(indicador ?? '') }}>
+        Cancelar
+      </button>
+    </div>
+  )
+}
+
 export function AgregarAccion({
   pdiId, catalogo, fechaInicioDefault, fechaFinDefault,
 }: {
@@ -53,6 +102,7 @@ export function AgregarAccion({
   const [accionLibre, setAccionLibre] = useState('')
   const [competenciaLibre, setCompetenciaLibre] = useState('')
   const [tipoLibre, setTipoLibre] = useState('')
+  const [indicador, setIndicador] = useState('')
   const [fechaInicio, setFechaInicio] = useState(fechaInicioDefault)
   const [fechaFin, setFechaFin] = useState(fechaFinDefault)
   const [responsable, setResponsable] = useState('Jefe directo')
@@ -64,6 +114,7 @@ export function AgregarAccion({
 
   function limpiar() {
     setModo('catalogo'); setAccionId(''); setAccionLibre(''); setCompetenciaLibre(''); setTipoLibre('')
+    setIndicador('')
     setFechaInicio(fechaInicioDefault); setFechaFin(fechaFinDefault); setResponsable('Jefe directo')
     setError(''); setAbierto(false)
   }
@@ -79,6 +130,7 @@ export function AgregarAccion({
         accion_libre: modo === 'manual' ? accionLibre : undefined,
         competencia_libre: modo === 'manual' ? competenciaLibre : undefined,
         tipo_libre: modo === 'manual' ? tipoLibre : undefined,
+        indicador,
         fecha_inicio: fechaInicio,
         fecha_fin: fechaFin,
         responsable_seguimiento: responsable,
@@ -142,6 +194,13 @@ export function AgregarAccion({
             </div>
           </>
         )}
+
+        <div className="field">
+          <label className="field__label">Indicador</label>
+          <input className="ca-input ca-input--sm" value={indicador} onChange={e => setIndicador(e.target.value)}
+            placeholder="Ej: 95% de compromisos entregados a tiempo" />
+          <span className="field__hint">Cómo se verifica que la acción cerró la brecha. Sale en el acta.</span>
+        </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 10 }}>
           <div className="field">

@@ -202,6 +202,22 @@ export async function reemplazarAccionPdi(args: {
   return { ok: true }
 }
 
+/** El indicador dice cómo se verifica que la acción cerró la brecha. */
+export async function actualizarIndicadorAccion(args: {
+  pdi_accion_id: string
+  pdi_id: string
+  indicador: string
+}) {
+  const supabase = await crearClienteServidor()
+  const { error } = await supabase
+    .from('pdi_acciones')
+    .update({ indicador: args.indicador.trim() || null })
+    .eq('id', args.pdi_accion_id)
+  if (error) return { error: error.message }
+  revalidarPdi(args.pdi_id)
+  return { ok: true }
+}
+
 export async function agregarAccionPdi(args: {
   pdi_id: string
   // Catálogo:
@@ -211,6 +227,7 @@ export async function agregarAccionPdi(args: {
   competencia_libre?: string
   tipo_libre?: string
   // Comunes:
+  indicador?: string
   fecha_inicio: string
   fecha_fin: string
   responsable_seguimiento: string
@@ -230,6 +247,7 @@ export async function agregarAccionPdi(args: {
     accion_libre: esManual ? args.accion_libre!.trim() : null,
     competencia_libre: esManual ? ((args.competencia_libre ?? '').trim() || null) : null,
     tipo_libre: esManual ? ((args.tipo_libre ?? '').trim() || null) : null,
+    indicador: (args.indicador ?? '').trim() || null,
     fecha_inicio: args.fecha_inicio,
     fecha_fin: args.fecha_fin,
     responsable_seguimiento: args.responsable_seguimiento || 'Jefe directo',
