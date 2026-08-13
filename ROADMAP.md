@@ -339,7 +339,8 @@ El aprobador **se deduce de la etapa** (TH en 1 y 2, jefe en 3), no se guarda po
 - [ ] Enganche con la **evaluación de período de prueba** (Etapa 10) | Asignado: ``
 
 ### Sub-etapa G — Cierre y enganches
-- [ ] `/onboarding/seguimiento`: quién está en acogida, avance y lo que espera mi aprobación | Asignado: ``
+- [x] **Aprobación de pasos** (Claude-Simon): faltaba la mitad del circuito — el colaborador reportaba y **nadie podía aprobar**, no existía el RPC. Nuevo `aprobar_item_onboarding` (SECURITY DEFINER) que deduce el aprobador de la etapa: TH en inducción y socialización, jefe inmediato en entrenamiento. Nadie aprueba su propia acogida. Permite **devolver** con nota (vuelve a pendiente) y **cierra la acogida** sola cuando no queda ningún obligatorio sin aprobar
+- [x] `/onboarding/seguimiento`: quién está en acogida, avance y lo que espera mi aprobación. Lo accionable va primero; abajo el panorama con avance aprobado y pasos vencidos. Admin ve todo, el jefe solo a su gente (ya lo limita la RLS). Enlace en el sidebar para admin y líderes
 - [ ] **Firma de recibido** al completar, reutilizando el patrón de PDI | Asignado: ``
 - [ ] Internalizar los 3 Google Forms de cierre (asistencia, perfil sociodemográfico, evaluación) | Asignado: ``
 - [ ] Ítems que enlacen a **políticas** (Etapa 7) y a los **procesos de su gestión** | Asignado: ``
