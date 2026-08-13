@@ -21,6 +21,28 @@ export async function reportarItem(itemId: string, hecho: boolean) {
   return { ok: true }
 }
 
+/**
+ * El aprobador confirma o devuelve un paso reportado.
+ * Quién puede hacerlo lo decide el RPC según la etapa: TH en inducción y
+ * socialización, jefe inmediato en entrenamiento.
+ */
+export async function aprobarItem(itemId: string, aprobar: boolean, nota?: string) {
+  const supabase = await crearClienteServidor()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  const { error } = await supabase.rpc('aprobar_item_onboarding', {
+    p_item: itemId,
+    p_aprobar: aprobar,
+    p_nota: nota?.trim() || null,
+  })
+  if (error) return { error: error.message }
+
+  revalidatePath('/onboarding/seguimiento')
+  revalidatePath('/onboarding')
+  return { ok: true }
+}
+
 /** TH inicia la acogida de una persona. */
 export async function iniciarOnboarding(usuarioId: string) {
   const supabase = await crearClienteServidor()

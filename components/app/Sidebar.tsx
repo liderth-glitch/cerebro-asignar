@@ -102,10 +102,17 @@ export default function Sidebar({ rol, aprobacionesPendientes = 0, gestionId }: 
           <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
         </Link>
 
-        <Link href="/onboarding" className={`nav-item ${activa('/onboarding') ? 'is-active' : ''}`} onClick={navegar}>
+        <Link href="/onboarding" className={`nav-item ${ruta === '/onboarding' ? 'is-active' : ''}`} onClick={navegar}>
           <Icono nombre="bookmark" className="nav-item__icon" /> Mi Acogida
           <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
         </Link>
+
+        {(esAdmin || esLider) && (
+          <Link href="/onboarding/seguimiento" className={`nav-item ${activa('/onboarding/seguimiento') ? 'is-active' : ''}`} onClick={navegar}>
+            <Icono nombre="inbox" className="nav-item__icon" /> Seguimiento acogida
+            <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
+          </Link>
+        )}
 
         <Link href="/capacitaciones" className={`nav-item ${activa('/capacitaciones') ? 'is-active' : ''}`} onClick={navegar}>
           <Icono nombre="star" className="nav-item__icon" /> Capacitaciones
