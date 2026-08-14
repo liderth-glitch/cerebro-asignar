@@ -419,9 +419,11 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
                 {tiposDocumento.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
               </select>
               <span className="field__hint">
-                {mostrarPasos
-                  ? 'Este tipo lleva paso a paso de actividades.'
-                  : `“${nombreTipo}” no lleva paso a paso.`}
+                {!nombreTipo
+                  ? 'Sin tipo definido: se muestran todas las secciones.'
+                  : tipoUsaPasos(nombreTipo)
+                    ? `“${nombreTipo}” lleva paso a paso de actividades.`
+                    : `“${nombreTipo}” no lleva paso a paso.`}
               </span>
             </div>
             <div className="field">
