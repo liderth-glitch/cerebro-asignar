@@ -597,12 +597,12 @@ Nace de la reunión del 2026-07-10 con **John William Guzmán Forero** (coord. S
 - [x] Botones **aprobar / rechazar** en `/admin/aprobaciones`; flujo `borrador → en_revision → activo` (ya existían; al aprobar ahora también se registra la versión)
 - [x] Firma electrónica del documento **reutilizando el patrón de PDI** (marca `Nombre — fecha`): se graba `firma_aprobacion` al aprobar y se muestra en la ficha. Un documento que sale de "activo" pierde su firma
 - [x] Fix Sub-etapa A: el "Aprobó" de control documental usaba la columna `aprobado_por` (uuid, reservada al aprobador del flujo) → nueva columna `aprobado_por_nombre` (text)
-- [ ] Notificar al líder el resultado de la aprobación (pendiente: correo, bloqueado por SMTP)
+- [ ] Notificar al líder el resultado de la aprobación. **Ya no está bloqueado por SMTP:** se descartó el correo y el centro de notificaciones interno (`notificaciones` + campana) está funcionando. Falta enganchar aprobar/rechazar con `crear_notificacion` — hoy el flujo de aprobaciones no notifica nada | Asignado: ``
 
 ### Sub-etapa C — Editor web y exportación a PDF | Claude-Simon
 - [x] **Exportar a PDF** con formato oficial: ruta `/procesos/[id]/imprimir` + CSS `@media print` (sin dependencias nuevas; se guarda con "Imprimir → Guardar como PDF"). Encabezado normalizado (marca/gestión · título/tipo · código, versión, emisión, actualización), objetivo, alcance, desarrollo del procedimiento (o ficha de cliente + acuerdo), documentos relacionados, **control de cambios alimentado por `historial_versiones`**, bloque de firmas (elaboró/revisó/aprobó) con la firma electrónica, y pie con próxima revisión + "copia impresa no controlada". Botón "Exportar PDF" en la ficha
 - [x] **Editor estructurado según el tipo de documento**: columna `procesos.secciones` (jsonb) con secciones libres (título + contenido, reordenables) + **esqueleto sugerido por tipo** (`lib/documentos/plantillas.ts`, los 8 tipos con su estructura y una pista de uso). El botón "Cargar estructura de X" **añade** las secciones que falten, nunca sobreescribe lo escrito. El bloque de "Pasos del procedimiento" solo aparece en Procedimiento e Instructivo (o si el documento ya tiene pasos). Las secciones se muestran en la ficha y en el PDF, con numeración corrida
-- [ ] Logo de Asignar en el encabezado del PDF (falta el asset; debe ir en `public/logo-asignar.png`)
+- [x] Logo de Asignar en el encabezado del PDF (`public/logo-asignar.png`, ya en uso en el PDF de procesos, el manual de cargo y el acta del PDI)
 - [x] Los formatos (Excel, etc.) siguen como adjuntos (se listan en el PDF)
 
 ### Sub-etapa D — Revisión periódica y alertas | Claude-Simon
@@ -610,11 +610,11 @@ Nace de la reunión del 2026-07-10 con **John William Guzmán Forero** (coord. S
 - [x] **Tablero `/procesos/revision`**: KPIs (vencidos, por vencer, sin fecha, vigentes) + tabla ordenada por urgencia. El admin ve toda la organización; el líder solo su gestión. Enlace en el sidebar
 - [x] Alerta en la ficha del proceso cuando está vencido o por vencer (mensaje distinto para quien puede editar y para quien solo consulta)
 - [x] **Decisión: NO se cambia `estado` automáticamente.** Un proceso en `desactualizado` deja de ser visible para los colaboradores, así que un job que lo marcara al vencer escondería los procedimientos vencidos de toda la empresa. La vigencia es un eje aparte del ciclo de aprobación. **Hecho:** `proxima_revision_anual()` fija `fecha_proxima_revision` al 31 de julio del ciclo siguiente al aprobar (en aprobaciones y en el editor). Backfill de los 8 publicados. Botón «Lanzar revisión anual» en `/procesos/revision` que notifica a los líderes (RPC `notificar_revision_anual`, solo TH). Push automático en julio quedaría con un scheduler
-- [ ] Notificación push/correo al líder al vencer (pendiente: mismo bloqueo de SMTP)
+- [ ] Notificación al líder al vencer un documento. **Tampoco lo bloquea el SMTP**: el botón «Lanzar revisión anual» ya notifica por dentro; falta el disparo automático, que sí requiere un scheduler | Asignado: ``
 - [ ] **Alertas transversales**: si cambia un cargo en el organigrama, notificar los procedimientos afectados
 
 ### Sub-etapa E — Interconexión y glosario
-- [ ] **Glosario por gestión**: cada líder crea y mantiene sus términos
+- [x] **Glosario por gestión**: cada líder crea y mantiene sus términos (`/glosario`)
 - [ ] **Repositorio de manuales de cargo**, enlazado con procesos y procedimientos
 - [ ] Interconexión procedimientos ↔ manual de funciones: agregar un cargo a una tarea actualiza el manual; quitar una responsabilidad se refleja en los KPIs del colaborador
 - [ ] Trazabilidad cruzada por cliente entre gestiones, sin que se sobreescriban
