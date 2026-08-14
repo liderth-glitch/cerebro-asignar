@@ -8,6 +8,7 @@ import BadgeEstado from '@/components/app/BadgeEstado'
 import Icono from '@/components/app/Icono'
 import PanelHistorial from './PanelHistorial'
 import DocumentosProceso from './DocumentosProceso'
+import BotonEliminarProceso from './BotonEliminarProceso'
 import PasoExpandible from '@/components/app/PasoExpandible'
 import type { PasoDetalle } from '@/components/app/PasoExpandible'
 import { calcularVigencia, textoVigencia } from '@/lib/documentos/vigencia'
@@ -60,6 +61,12 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
   // Sube documentos quien puede editar el proceso: admin, el líder designado de la
   // gestión o un líder que pertenece a ella — alineado con la RLS es_lider_gestion
   const puedeSubirDocs = puedeEditar || (!!lider && lider.id === sesion.id)
+
+  // Eliminar no depende del rol: los aprobadores de Calidad también son admin.
+  // Se otorga persona por persona. Si la columna aún no existe, nadie puede.
+  const { data: permiso, error: errPermiso } = await supabase
+    .from('usuarios').select('puede_eliminar_procesos').eq('id', sesion.id).maybeSingle()
+  const puedeEliminar = !errPermiso && permiso?.puede_eliminar_procesos === true
 
   const esCliente = proceso.es_proceso_cliente === true
   const contactos = (proceso.cliente_contactos as { nombre: string; telefono: string; correo: string }[]) ?? []
@@ -114,6 +121,14 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
               <Link href={`/procesos/${id}/editar`} className="btn btn--primary btn--sm">
                 <Icono nombre="edit" className="icon icon--sm" /> Editar
               </Link>
+            )}
+            {puedeEliminar && (
+              <BotonEliminarProceso
+                procesoId={id}
+                nombre={proceso.nombre}
+                numPasos={pasos.length}
+                numDocs={documentos.length}
+              />
             )}
           </div>
         </div>
