@@ -34,6 +34,17 @@ function nombreFirma(firma: string | null): string | null {
   if (!firma) return null
   return firma.split('—')[0].trim() || null
 }
+/**
+ * Fecha real en que se firmó, no la del acuerdo: el acta es un documento
+ * oficial y no puede afirmar una fecha de firma que no ocurrió.
+ */
+function fechaDeFirma(firma: string | null): string | null {
+  if (!firma) return null
+  const iso = firma.split('—').slice(1).join('—').trim()
+  if (!iso) return null
+  const d = new Date(iso)
+  return Number.isNaN(d.getTime()) ? null : fFecha(d.toISOString())
+}
 
 export default async function ImprimirActaPdi({ params }: { params: Promise<{ pdiId: string }> }) {
   const { pdiId } = await params
@@ -342,17 +353,17 @@ export default async function ImprimirActaPdi({ params }: { params: Promise<{ pd
                 <td>
                   <div><b>{firmaColabNom}</b></div>
                   <div style={{ fontSize: 10, color: '#555' }}>{cargo?.nombre ?? ''}</div>
-                  <div style={{ fontSize: 10, color: '#555' }}>{pdi.firma_colaborador ? `Firmado ${fFecha(pdi.fecha_acuerdo)}` : 'Fecha: __________'}</div>
+                  <div style={{ fontSize: 10, color: '#555' }}>{pdi.firma_colaborador ? `Firmado ${fechaDeFirma(pdi.firma_colaborador) ?? '—'}` : 'Fecha: __________'}</div>
                 </td>
                 <td>
                   <div><b>{firmaJefeNom || '__________'}</b></div>
                   <div style={{ fontSize: 10, color: '#555' }}>{jefeCargo ?? ''}</div>
-                  <div style={{ fontSize: 10, color: '#555' }}>{pdi.firma_jefe ? `Firmado ${fFecha(pdi.fecha_acuerdo)}` : 'Fecha: __________'}</div>
+                  <div style={{ fontSize: 10, color: '#555' }}>{pdi.firma_jefe ? `Firmado ${fechaDeFirma(pdi.firma_jefe) ?? '—'}` : 'Fecha: __________'}</div>
                 </td>
                 <td>
                   <div><b>{firmaThNom || '__________'}</b></div>
                   <div style={{ fontSize: 10, color: '#555' }}>Talento Humano</div>
-                  <div style={{ fontSize: 10, color: '#555' }}>{pdi.firma_th ? `Firmado ${fFecha(pdi.fecha_acuerdo)}` : 'Fecha: __________'}</div>
+                  <div style={{ fontSize: 10, color: '#555' }}>{pdi.firma_th ? `Firmado ${fechaDeFirma(pdi.firma_th) ?? '—'}` : 'Fecha: __________'}</div>
                 </td>
               </tr>
             </tbody>
