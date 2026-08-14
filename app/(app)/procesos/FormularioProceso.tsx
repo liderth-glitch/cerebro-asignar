@@ -418,6 +418,11 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
                 <option value="">Sin definir</option>
                 {tiposDocumento.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
               </select>
+              <span className="field__hint">
+                {mostrarPasos
+                  ? 'Este tipo lleva paso a paso de actividades.'
+                  : `“${nombreTipo}” no lleva paso a paso.`}
+              </span>
             </div>
             <div className="field">
               <label className="field__label">Código</label>
@@ -604,6 +609,21 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
               </div>
             </section>
           </>
+        )}
+
+        {/* Si el tipo elegido no lleva pasos, se explica en vez de esconder la sección sin más */}
+        {!modoCliente && !mostrarPasos && (
+          <section className="card" style={{ padding: 20, borderColor: 'var(--warning)', background: 'var(--warning-soft)' }}>
+            <h3 style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: 'var(--warning-ink)' }}>
+              Este documento no lleva paso a paso
+            </h3>
+            <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)' }}>
+              Elegiste el tipo <strong>{nombreTipo}</strong>, que se documenta solo con secciones.
+              Si lo que vas a escribir es una secuencia de actividades —quién hace qué, en qué orden,
+              con sus entradas y salidas— cambia el tipo a <strong>Procedimiento</strong> o{' '}
+              <strong>Instructivo</strong> arriba, en «Datos de calidad», y aparecerá el bloque de pasos.
+            </p>
+          </section>
         )}
 
         {/* Pasos — solo para los tipos que se documentan paso a paso */}
