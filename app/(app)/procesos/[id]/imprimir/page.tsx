@@ -143,6 +143,7 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
                 <div><b>Versión:</b> <span>{proceso.version}</span></div>
                 <div><b>Emisión:</b> <span>{fFecha(proceso.fecha_emision)}</span></div>
                 <div><b>Actualización:</b> <span>{fFecha(proceso.fecha_actualizacion)}</span></div>
+                <div><b>Aplica en:</b> <span>{proceso.ciudad ?? 'Nacional'}</span></div>
               </td>
             </tr>
           </tbody>

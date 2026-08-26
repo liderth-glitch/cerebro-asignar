@@ -8,7 +8,7 @@ import IconoArchivo from '@/components/app/IconoArchivo'
 import BadgeEstado from '@/components/app/BadgeEstado'
 import { crearClienteNavegador } from '@/lib/supabase/client'
 import type { Rol, EstadoProceso } from '@/types'
-import { plantillaDeTipo, tipoUsaPasos, pistaPorTipo, type SeccionDoc } from '@/lib/documentos/plantillas'
+import { plantillaDeTipo, tipoUsaPasos, pistaPorTipo, TIPOS_CON_PASOS, type SeccionDoc } from '@/lib/documentos/plantillas'
 import SelectorCargos, { type CargoCatalogo, type PasoCargo } from './SelectorCargos'
 import ImportarPasosExcel, { type PasoImportado } from './ImportarPasosExcel'
 import { proximaRevisionAnual } from '@/lib/documentos/vigencia'
@@ -30,6 +30,9 @@ interface Paso {
   proceso_cliente: string
 }
 interface Documento { id?: string; nombre: string; tipo_archivo: string; url_descarga: string; tamano_bytes: number | null; archivo?: File }
+
+/** Sedes de Asignar. Un documento sin ciudad aplica a nivel nacional. */
+const SEDES = ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Rionegro', 'Pereira', 'Santa Marta']
 
 /** Debe coincidir con la validación de `subirDocumentoProceso`. */
 const EXT_DOC_OK = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'webp', 'gif']
@@ -55,6 +58,7 @@ interface Props {
     version: string
     estado: string
     gestion_id: string
+    ciudad?: string | null
     pasos: Paso[]
     documentos: Documento[]
     es_proceso_cliente?: boolean
@@ -112,6 +116,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
   const [acuerdoDetalles, setAcuerdoDetalles] = useState(procesoExistente?.acuerdo_detalles ?? '')
 
   // Control documental (Calidad)
+  const [ciudad, setCiudad] = useState(procesoExistente?.ciudad ?? '')
   const [tipoDocId, setTipoDocId] = useState(procesoExistente?.tipo_documento_id ?? '')
   const [codigo, setCodigo] = useState(procesoExistente?.codigo ?? '')
   const [fechaEmision, setFechaEmision] = useState(procesoExistente?.fecha_emision ?? '')
@@ -127,6 +132,11 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
   // El bloque de actividades se muestra si el tipo lo usa, o si el documento ya tiene pasos cargados
   const mostrarPasos = tipoUsaPasos(nombreTipo) || pasos.some(p => p.nombre || p.descripcion)
   const plantillaSugerida = plantillaDeTipo(nombreTipo)
+  // Un procedimiento o instructivo se documenta con el paso a paso; el bloque de
+  // secciones ahí solo confunde. Se mantiene visible si el documento ya tiene algo
+  // escrito: si no, quedaría inaccesible en el editor pero seguiría saliendo en el PDF.
+  const seccionesEscritas = secciones.some(s => s.titulo.trim() || s.contenido.trim())
+  const mostrarSecciones = !TIPOS_CON_PASOS.includes(nombreTipo ?? '') || seccionesEscritas
 
   function agregarSeccion(titulo = '') {
     setSecciones([...secciones, { titulo, contenido: '' }])
@@ -243,6 +253,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
       const dataProceso = {
         nombre: nombre.trim(),
         gestion_id: gestionId,
+        ciudad: ciudad || null,
         objetivo: objetivo.trim(),
         version,
         estado: estadoFinal,
@@ -396,6 +407,14 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
                 </select>
               </div>
               <div className="field">
+                <label className="field__label">Ciudad</label>
+                <select className="ca-select" value={ciudad} onChange={e => setCiudad(e.target.value)}>
+                  <option value="">Nacional (todas las sedes)</option>
+                  {SEDES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <span className="field__hint">Déjalo en Nacional si aplica a toda la empresa.</span>
+              </div>
+              <div className="field">
                 <label className="field__label">Estado</label>
                 <select className="ca-select" value={estado} onChange={e => setEstado(e.target.value as EstadoProceso)}
                   disabled={!esAdmin}>
@@ -471,7 +490,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
         </section>
 
         {/* Contenido del documento — secciones libres, con esqueleto sugerido por tipo */}
-        {!modoCliente && (
+        {!modoCliente && mostrarSecciones && (
           <section className="card card--padded">
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
               <div>
@@ -480,7 +499,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
               </div>
               {plantillaSugerida.length > 0 && (
                 <button type="button" className="btn btn--secondary btn--sm" onClick={cargarPlantilla}>
-                  <Icono nombre="plus" className="icon icon--sm" /> Cargar estructura de {nombreTipo}
+                  <Icono nombre="plus" className="icon icon--sm" /> Cargar {nombreTipo}
                 </button>
               )}
             </div>

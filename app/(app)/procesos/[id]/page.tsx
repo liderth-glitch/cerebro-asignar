@@ -108,6 +108,11 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
                 Actualizado {new Date(proceso.fecha_actualizacion).toLocaleDateString('es-CO')}
               </div>
               <div className="meta-divider" />
+              <div className="hstack" style={{ gap: 6 }}>
+                <Icono nombre="grid" className="icon icon--sm" />
+                {proceso.ciudad ?? 'Nacional'}
+              </div>
+              <div className="meta-divider" />
               <BadgeEstado estado={proceso.estado} />
             </div>
           </div>

@@ -437,7 +437,7 @@ El editor marca cada paso sin homologar mostrando el texto anterior, para resolv
 ### Ideas nuevas de la reunión (ver artefacto del layout)
 - [ ] **Manual de cargo automático** — abrir un cargo trae todas sus actividades. Ya viable gracias a `paso_cargos`. = Etapa 18 | Asignado: ``
 - [ ] Tareas con periodicidad y fecha → compromiso automático en Comités + recordatorios (“en el tintero”) | Asignado: ``
-- [ ] Sede/ciudad del procedimiento (Bogotá / Medellín / Costa) | Asignado: ``
+- [x] **Sede/ciudad del procedimiento** (Claude-Simon): lista fija con las 8 sedes reales (Bogotá, Medellín, Cali, Barranquilla, Cartagena, Rionegro, Pereira, Santa Marta). Vacío = Nacional, que es el caso por defecto. Se ve en la ficha y en el bloque de control documental del PDF
 - [ ] Buscador con IA sobre la documentación (visión final) | Asignado: ``
 
 ---
