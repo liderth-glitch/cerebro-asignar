@@ -114,7 +114,7 @@ export default async function PaginaPdi({ params }: { params: Promise<{ pdiId: s
                   : <div style={{ fontSize: 13, color: 'var(--text-3)' }}>{nombreOrigen(origen)}</div>}
               </div>
               {pdi.acta_origen_path && (esAdmin || esJefeDirecto) && (
-                <BotonActa path={pdi.acta_origen_path} />
+                <BotonActa pdiId={pdi.id} />
               )}
             </div>
           </section>

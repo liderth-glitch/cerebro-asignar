@@ -27,6 +27,8 @@ export default function BotonEliminarProceso({
     startTransition(async () => {
       const res = await eliminarProceso(procesoId)
       if (res?.error) { setError(res.error); return }
+      // El borrado ya ocurrió; si algún archivo quedó atrás hay que decirlo
+      if (res?.aviso) alert(res.aviso)
       router.push('/gestiones')
       router.refresh()
     })

@@ -28,6 +28,20 @@ create policy procesos_eliminar_autorizado on procesos for delete
     where u.id = auth.uid() and u.activo and u.puede_eliminar_procesos
   ));
 
+-- 3b. Los adjuntos se borran del bucket con las credenciales de quien elimina, y
+--     `documentos_storage_eliminar` exige rol lider/admin. Si esta marca se otorga
+--     a alguien que no lo es, las filas se borrarían y los archivos quedarían
+--     huérfanos. Se permite borrar también a quien tenga la marca.
+drop policy if exists doc_storage_del_autorizado on storage.objects;
+create policy doc_storage_del_autorizado on storage.objects for delete
+  using (
+    bucket_id = 'documentos-procesos'
+    and exists (
+      select 1 from usuarios u
+      where u.id = auth.uid() and u.activo and u.puede_eliminar_procesos
+    )
+  );
+
 -- 4. Borrado completo en una sola operación.
 --    Va como SECURITY DEFINER porque `historial_versiones` no tiene policy de
 --    DELETE: sin esto el borrado fallaría a medias y dejaría el proceso a medio

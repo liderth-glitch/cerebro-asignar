@@ -6,6 +6,10 @@ import { crearClienteServidor } from '@/lib/supabase/server'
 
 const BUCKET = 'documentos-procesos'
 
+export type ResultadoEliminar =
+  | { error: string; ok?: undefined; aviso?: undefined }
+  | { ok: true; error?: undefined; aviso?: string; nombre?: string; pasos?: number; documentos?: number }
+
 /**
  * Elimina un proceso y todo lo que cuelga de él. Irreversible.
  *
@@ -14,7 +18,7 @@ const BUCKET = 'documentos-procesos'
  * La validación real vive en el RPC; aquí solo se limpian los archivos del
  * bucket, que el borrado en base de datos no toca.
  */
-export async function eliminarProceso(procesoId: string) {
+export async function eliminarProceso(procesoId: string): Promise<ResultadoEliminar> {
   const supabase = await crearClienteServidor()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
@@ -31,15 +35,19 @@ export async function eliminarProceso(procesoId: string) {
   const { data, error } = await supabase.rpc('eliminar_proceso', { p_proceso_id: procesoId })
   if (error) return { error: error.message }
 
-  // Si esto falla quedan archivos huérfanos en el bucket, pero el proceso ya
-  // se eliminó: no se revierte, solo no se reporta como fallo del borrado.
+  // El proceso ya se eliminó, así que un fallo aquí no se revierte: se reporta.
+  // Callarlo dejaría archivos huérfanos en el bucket diciendo que todo salió bien.
+  let aviso: string | undefined
   if (rutas.length > 0) {
-    await supabase.storage.from(BUCKET).remove(rutas)
+    const { error: errArchivos } = await supabase.storage.from(BUCKET).remove(rutas)
+    if (errArchivos) {
+      aviso = `El documento se eliminó, pero ${rutas.length} archivo(s) siguen en el almacenamiento: ${errArchivos.message}`
+    }
   }
 
   const resumen = (data ?? {}) as { nombre?: string; pasos?: number; documentos?: number }
 
   revalidatePath('/gestiones')
   revalidatePath('/procesos/revision')
-  return { ok: true, ...resumen }
+  return { ok: true, aviso, ...resumen }
 }

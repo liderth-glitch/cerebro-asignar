@@ -13,18 +13,16 @@ const ETIQUETA_ETAPA: Record<string, string> = {
   entrenamiento: 'Entrenamiento',
 }
 
-function uno<T>(v: T | T[] | null | undefined): T | null {
-  return Array.isArray(v) ? (v[0] ?? null) : (v ?? null)
-}
-
 export default async function PaginaSeguimientoAcogida() {
   const sesion = await obtenerSesion()
   const supabase = await crearClienteServidor()
   const esAdmin = sesion.rol === 'admin'
 
-  // Ve esta pantalla quien aprueba algo: TH o quien tenga reportes directos
+  // Ve esta pantalla quien aprueba algo: TH o quien tenga reportes directos.
+  // Contra `directorio_usuarios`, no `usuarios`: la RLS de esa tabla solo deja
+  // ver la propia fila a quien no es admin, así que el conteo daría siempre 0.
   const { count: reportes } = await supabase
-    .from('usuarios')
+    .from('directorio_usuarios')
     .select('id', { count: 'exact', head: true })
     .eq('jefe_id', sesion.id)
     .eq('activo', true)
@@ -33,20 +31,35 @@ export default async function PaginaSeguimientoAcogida() {
   // La RLS ya limita: admin ve todo, el jefe solo a su gente
   const { data: acogidasRaw } = await supabase
     .from('onboarding')
-    .select('id, usuario_id, fecha_inicio, estado, usuario:usuarios!onboarding_usuario_id_fkey(nombre, jefe_id, gestion:gestiones(nombre))')
+    .select('id, usuario_id, fecha_inicio, estado')
     .in('estado', ['en_curso', 'completado'])
     .order('fecha_inicio', { ascending: false })
 
   const acogidas = acogidasRaw ?? []
   const ids = acogidas.map(a => a.id)
+  const personaIds = [...new Set(acogidas.map(a => a.usuario_id))]
 
-  const { data: itemsRaw } = ids.length > 0
-    ? await supabase
-        .from('onboarding_items')
-        .select('id, onboarding_id, etapa, orden, titulo, obligatorio, fecha_limite, estado, reportado_at, nota')
-        .in('onboarding_id', ids)
-        .order('orden')
-    : { data: [] as never[] }
+  // Los datos de cada persona también salen de la vista, por la misma razón
+  const [{ data: personasRaw }, { data: itemsRaw }] = await Promise.all([
+    personaIds.length > 0
+      ? supabase.from('directorio_usuarios')
+          .select('id, nombre, jefe_id, gestion_id').in('id', personaIds)
+      : Promise.resolve({ data: [] as { id: string; nombre: string; jefe_id: string | null; gestion_id: string | null }[] }),
+    ids.length > 0
+      // El rango explícito evita el tope de 1000 filas, que truncaría en silencio
+      // y dejaría acogidas con avance 0 y aprobaciones invisibles
+      ? supabase
+          .from('onboarding_items')
+          .select('id, onboarding_id, etapa, orden, titulo, obligatorio, fecha_limite, estado, reportado_at, nota')
+          .in('onboarding_id', ids)
+          .order('orden')
+          .range(0, 9999)
+      : Promise.resolve({ data: [] as never[] }),
+  ])
+
+  const { data: gestionesRaw } = await supabase.from('gestiones').select('id, nombre')
+  const mapGestion = new Map((gestionesRaw ?? []).map(g => [g.id, g.nombre]))
+  const mapPersona = new Map((personasRaw ?? []).map(p => [p.id, p]))
 
   const items = itemsRaw ?? []
   const hoy = hoyISO()
@@ -59,15 +72,16 @@ export default async function PaginaSeguimientoAcogida() {
   }
 
   const filas = acogidas.map(a => {
-    const u = uno(a.usuario as unknown as { nombre: string; jefe_id: string | null; gestion: unknown } | null)
-    const g = uno(u?.gestion as { nombre: string } | { nombre: string }[] | null)
+    const u = mapPersona.get(a.usuario_id) ?? null
     const props = porAcogida.get(a.id) ?? []
     const total = props.length
     const aprobados = props.filter(i => i.estado === 'aprobado').length
     const vencidos = props.filter(i =>
       i.estado !== 'aprobado' && i.fecha_limite && i.fecha_limite < hoy).length
-    // Solo aprueba entrenamiento el jefe; inducción y socialización son de TH
-    const mios = props.filter(i => {
+    // Inducción y socialización las aprueba TH; el entrenamiento, el jefe inmediato.
+    // Nadie aprueba su propia acogida, así que la propia no entra a la bandeja.
+    const esMiPropiaAcogida = a.usuario_id === sesion.id
+    const mios = esMiPropiaAcogida ? [] : props.filter(i => {
       if (i.estado !== 'reportado') return false
       if (i.etapa === 'entrenamiento') return esAdmin || u?.jefe_id === sesion.id
       return esAdmin
@@ -75,7 +89,7 @@ export default async function PaginaSeguimientoAcogida() {
     return {
       id: a.id,
       nombre: u?.nombre ?? '—',
-      gestion: g?.nombre ?? null,
+      gestion: u?.gestion_id ? (mapGestion.get(u.gestion_id) ?? null) : null,
       fecha_inicio: a.fecha_inicio,
       estado: a.estado,
       total,

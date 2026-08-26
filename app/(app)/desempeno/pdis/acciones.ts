@@ -16,6 +16,23 @@ function revalidarPdi(pdiId: string) {
   revalidatePath('/desempeno/pdis')
 }
 
+/**
+ * El contenido del plan solo se toca en borrador: una vez enviado a firma, lo que
+ * se firmó debe ser lo que quedó. La UI ya lo esconde, pero con una pestaña vieja
+ * abierta mientras otro firma se podrían editar las acciones de un plan vigente.
+ */
+async function exigirBorrador(
+  supabase: Awaited<ReturnType<typeof crearClienteServidor>>,
+  pdiId: string,
+): Promise<string | null> {
+  const { data } = await supabase.from('pdi').select('estado').eq('id', pdiId).maybeSingle()
+  if (!data) return 'No se encontró el plan'
+  if (data.estado !== 'borrador') {
+    return 'Este plan ya salió de borrador: no se puede modificar su contenido'
+  }
+  return null
+}
+
 function hoyISO() {
   return new Date().toISOString().slice(0, 10)
 }
@@ -162,10 +179,33 @@ export async function crearPdiManual(args: {
   return { pdi_id: pdi.id }
 }
 
-/** URL firmada para consultar el acta que soporta el origen del PDI. */
-export async function urlActaOrigen(path: string) {
+/**
+ * URL firmada del acta que soporta el origen del PDI.
+ *
+ * Recibe el PDI, nunca la ruta: el acta de un disciplinario es sensible y el
+ * bucket deja leer a cualquier líder, así que aceptar una ruta del cliente
+ * permitiría firmar el acta de otra persona. La ruta se lee de la base y solo
+ * después de comprobar que quien pregunta puede ver ese PDI.
+ */
+export async function urlActaOrigen(pdiId: string) {
   const supabase = await crearClienteServidor()
-  const { data, error } = await supabase.storage.from('actas-pdi').createSignedUrl(path, 600)
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Sesión requerida' }
+
+  // La RLS de `pdi` ya limita a colaborador, jefe y admin
+  const { data: pdi } = await supabase
+    .from('pdi').select('colaborador_id, acta_origen_path').eq('id', pdiId).maybeSingle()
+  if (!pdi?.acta_origen_path) return { error: 'Este plan no tiene acta de soporte' }
+
+  const [{ data: perfil }, { data: colab }] = await Promise.all([
+    supabase.from('usuarios').select('rol').eq('id', user.id).single(),
+    supabase.from('usuarios').select('jefe_id').eq('id', pdi.colaborador_id).single(),
+  ])
+  const puedeVer = perfil?.rol === 'admin' || colab?.jefe_id === user.id
+  if (!puedeVer) return { error: 'No tienes acceso al acta de este plan' }
+
+  const { data, error } = await supabase.storage
+    .from('actas-pdi').createSignedUrl(pdi.acta_origen_path, 600)
   if (error || !data) return { error: error?.message ?? 'No se pudo abrir el acta' }
   return { ok: true, url: data.signedUrl }
 }
@@ -176,6 +216,8 @@ export async function guardarObjetivosPdi(args: {
   objetivosSmart: string
 }) {
   const supabase = await crearClienteServidor()
+  const bloqueo = await exigirBorrador(supabase, args.pdiId)
+  if (bloqueo) return { error: bloqueo }
   const objetivo_general = args.objetivoGeneral.trim() || null
   const objetivos_smart = args.objetivosSmart.trim() || null
   const { error } = await supabase
@@ -193,6 +235,8 @@ export async function reemplazarAccionPdi(args: {
   nueva_accion_id: string
 }) {
   const supabase = await crearClienteServidor()
+  const bloqueo = await exigirBorrador(supabase, args.pdi_id)
+  if (bloqueo) return { error: bloqueo }
   const { error } = await supabase
     .from('pdi_acciones')
     .update({ accion_id: args.nueva_accion_id })
@@ -209,6 +253,8 @@ export async function actualizarIndicadorAccion(args: {
   indicador: string
 }) {
   const supabase = await crearClienteServidor()
+  const bloqueo = await exigirBorrador(supabase, args.pdi_id)
+  if (bloqueo) return { error: bloqueo }
   const { error } = await supabase
     .from('pdi_acciones')
     .update({ indicador: args.indicador.trim() || null })
@@ -233,6 +279,8 @@ export async function agregarAccionPdi(args: {
   responsable_seguimiento: string
 }) {
   const supabase = await crearClienteServidor()
+  const bloqueo = await exigirBorrador(supabase, args.pdi_id)
+  if (bloqueo) return { error: bloqueo }
 
   const esManual = !args.accion_id
   if (esManual && !(args.accion_libre ?? '').trim()) {
@@ -260,6 +308,8 @@ export async function agregarAccionPdi(args: {
 
 export async function eliminarAccionPdi(args: { pdi_accion_id: string; pdi_id: string }) {
   const supabase = await crearClienteServidor()
+  const bloqueo = await exigirBorrador(supabase, args.pdi_id)
+  if (bloqueo) return { error: bloqueo }
   const { error } = await supabase.from('pdi_acciones').delete().eq('id', args.pdi_accion_id)
   if (error) return { error: error.message }
   revalidarPdi(args.pdi_id)
@@ -276,6 +326,8 @@ export async function agregarCompromisoPdi(args: {
   fecha_limite: string
 }) {
   const supabase = await crearClienteServidor()
+  const bloqueo = await exigirBorrador(supabase, args.pdi_id)
+  if (bloqueo) return { error: bloqueo }
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { error: 'Sesión requerida' }
 
@@ -319,6 +371,8 @@ export async function actualizarCompromisoPdi(args: {
 
 export async function eliminarCompromisoPdi(args: { compromiso_id: string; pdi_id: string }) {
   const supabase = await crearClienteServidor()
+  const bloqueo = await exigirBorrador(supabase, args.pdi_id)
+  if (bloqueo) return { error: bloqueo }
   const { error } = await supabase.from('pdi_compromisos').delete().eq('id', args.compromiso_id)
   if (error) return { error: error.message }
   revalidarPdi(args.pdi_id)
@@ -327,6 +381,8 @@ export async function eliminarCompromisoPdi(args: { compromiso_id: string; pdi_i
 
 export async function enviarPdiAFirma(pdiId: string) {
   const supabase = await crearClienteServidor()
+  const bloqueo = await exigirBorrador(supabase, pdiId)
+  if (bloqueo) return { error: bloqueo }
   const { error } = await supabase
     .from('pdi')
     .update({ estado: 'en_firma', updated_at: new Date().toISOString() })

@@ -10,6 +10,7 @@ import { crearClienteNavegador } from '@/lib/supabase/client'
 import type { Rol, EstadoProceso } from '@/types'
 import { plantillaDeTipo, tipoUsaPasos, pistaPorTipo, type SeccionDoc } from '@/lib/documentos/plantillas'
 import SelectorCargos, { type CargoCatalogo, type PasoCargo } from './SelectorCargos'
+import ImportarPasosExcel, { type PasoImportado } from './ImportarPasosExcel'
 import { proximaRevisionAnual } from '@/lib/documentos/vigencia'
 import { subirDocumentoProceso } from './acciones-documentos'
 
@@ -182,6 +183,18 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
     const [item] = sig.splice(desde, 1)
     sig.splice(hacia, 0, item)
     setPasos(sig.map((p, j) => ({ ...p, numero_orden: j + 1 })))
+  }
+
+  /**
+   * Pasos leídos del formato en Excel. Entran al formulario, no a la base: el
+   * líder los revisa y asigna los cargos antes de guardar, y así el guardado
+   * sigue registrando la versión en el historial como cualquier otra edición.
+   */
+  function importarPasos(nuevos: PasoImportado[], reemplazar: boolean) {
+    const base = reemplazar ? [] : pasos
+    const combinados = [...base, ...nuevos]
+    setPasos(combinados.map((p, i) => ({ ...p, numero_orden: i + 1 })))
+    setError('')
   }
 
   function alSeleccionarArchivos(e: React.ChangeEvent<HTMLInputElement>) {
@@ -419,9 +432,11 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
                 {tiposDocumento.map(t => <option key={t.id} value={t.id}>{t.nombre}</option>)}
               </select>
               <span className="field__hint">
-                {mostrarPasos
-                  ? 'Este tipo lleva paso a paso de actividades.'
-                  : `“${nombreTipo}” no lleva paso a paso.`}
+                {!nombreTipo
+                  ? 'Sin tipo definido: se muestran todas las secciones.'
+                  : tipoUsaPasos(nombreTipo)
+                    ? `“${nombreTipo}” lleva paso a paso de actividades.`
+                    : `“${nombreTipo}” no lleva paso a paso.`}
               </span>
             </div>
             <div className="field">
@@ -629,9 +644,12 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
         {/* Pasos — solo para los tipos que se documentan paso a paso */}
         {!modoCliente && mostrarPasos && (
         <section className="card" style={{ padding: 26 }}>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 14 }}>
-            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Pasos del procedimiento</h3>
-            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Arrastra para reordenar</span>
+          <div className="hstack" style={{ alignItems: 'center', justifyContent: 'space-between', marginBottom: 14, gap: 10, flexWrap: 'wrap' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Pasos del procedimiento</h3>
+              <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Arrastra para reordenar</span>
+            </div>
+            <ImportarPasosExcel hayPasos={pasos.length > 0} onImportar={importarPasos} />
           </div>
           <div className="vstack" style={{ gap: 10 }}>
             {pasos.map((paso, i) => (

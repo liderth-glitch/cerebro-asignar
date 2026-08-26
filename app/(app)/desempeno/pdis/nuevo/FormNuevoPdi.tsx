@@ -66,7 +66,13 @@ export default function FormNuevoPdi({ personas }: {
         fecha_acuerdo: fechaAcuerdo,
         proxima_revision: proximaRevision,
       })
-      if (res.error) { setError(res.error); return }
+      if (res.error) {
+        // El acta ya está en el bucket pero no quedó plan que la referencie:
+        // sin esto, cada reintento dejaría otra copia inalcanzable.
+        if (actaPath) await supabase.storage.from(BUCKET).remove([actaPath])
+        setError(res.error)
+        return
+      }
       if (res.pdi_id) router.push(`/desempeno/pdis/${res.pdi_id}`)
     })
   }

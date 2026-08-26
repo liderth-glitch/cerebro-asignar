@@ -9,10 +9,12 @@ import type { Rol } from '@/types'
 interface SidebarProps {
   rol: Rol
   aprobacionesPendientes?: number
+  /** Tiene reportes directos: aprueba el entrenamiento de la acogida, sea cual sea su rol. */
+  tieneEquipo?: boolean
   gestionId?: string | null
 }
 
-export default function Sidebar({ rol, aprobacionesPendientes = 0, gestionId }: SidebarProps) {
+export default function Sidebar({ rol, aprobacionesPendientes = 0, tieneEquipo = false, gestionId }: SidebarProps) {
   const ruta = usePathname()
   const { sidebarOpen, closeSidebar } = useShell()
   const esAdmin = rol === 'admin'
@@ -107,7 +109,7 @@ export default function Sidebar({ rol, aprobacionesPendientes = 0, gestionId }: 
           <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
         </Link>
 
-        {(esAdmin || esLider) && (
+        {(esAdmin || tieneEquipo) && (
           <Link href="/onboarding/seguimiento" className={`nav-item ${activa('/onboarding/seguimiento') ? 'is-active' : ''}`} onClick={navegar}>
             <Icono nombre="inbox" className="nav-item__icon" /> Seguimiento acogida
             <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
