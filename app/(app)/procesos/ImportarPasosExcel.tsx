@@ -159,9 +159,13 @@ export default function ImportarPasosExcel({ onImportar, hayPasos }: {
               </label>
             )}
 
-            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-3)' }}>
+            <p style={{ margin: '0 0 6px', fontSize: 12, color: 'var(--text-3)' }}>
               Los pasos quedan en el formulario para que los revises. No se guarda nada hasta que
               guardes el documento, y los cargos de cada actividad se asignan aquí mismo.
+            </p>
+            <p style={{ margin: '0 0 14px', fontSize: 12, color: 'var(--text-3)' }}>
+              Esto importa solo las actividades. Los formatos y documentos de apoyo se adjuntan
+              aparte, en <strong>«Documentos relacionados»</strong>, más abajo en esta misma página.
             </p>
 
             <div className="hstack" style={{ gap: 8, justifyContent: 'flex-end' }}>
