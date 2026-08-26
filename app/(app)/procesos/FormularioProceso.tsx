@@ -31,6 +31,9 @@ interface Paso {
 }
 interface Documento { id?: string; nombre: string; tipo_archivo: string; url_descarga: string; tamano_bytes: number | null; archivo?: File }
 
+/** Sedes de Asignar. Un documento sin ciudad aplica a nivel nacional. */
+const SEDES = ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Rionegro', 'Pereira', 'Santa Marta']
+
 /** Debe coincidir con la validación de `subirDocumentoProceso`. */
 const EXT_DOC_OK = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'png', 'jpg', 'jpeg', 'webp', 'gif']
 const MAX_DOC_BYTES = 20 * 1024 * 1024
@@ -55,6 +58,7 @@ interface Props {
     version: string
     estado: string
     gestion_id: string
+    ciudad?: string | null
     pasos: Paso[]
     documentos: Documento[]
     es_proceso_cliente?: boolean
@@ -112,6 +116,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
   const [acuerdoDetalles, setAcuerdoDetalles] = useState(procesoExistente?.acuerdo_detalles ?? '')
 
   // Control documental (Calidad)
+  const [ciudad, setCiudad] = useState(procesoExistente?.ciudad ?? '')
   const [tipoDocId, setTipoDocId] = useState(procesoExistente?.tipo_documento_id ?? '')
   const [codigo, setCodigo] = useState(procesoExistente?.codigo ?? '')
   const [fechaEmision, setFechaEmision] = useState(procesoExistente?.fecha_emision ?? '')
@@ -248,6 +253,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
       const dataProceso = {
         nombre: nombre.trim(),
         gestion_id: gestionId,
+        ciudad: ciudad || null,
         objetivo: objetivo.trim(),
         version,
         estado: estadoFinal,
@@ -399,6 +405,14 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
                   <option value="">Seleccionar…</option>
                   {gestiones.map(g => <option key={g.id} value={g.id}>{g.nombre}</option>)}
                 </select>
+              </div>
+              <div className="field">
+                <label className="field__label">Ciudad</label>
+                <select className="ca-select" value={ciudad} onChange={e => setCiudad(e.target.value)}>
+                  <option value="">Nacional (todas las sedes)</option>
+                  {SEDES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+                <span className="field__hint">Déjalo en Nacional si aplica a toda la empresa.</span>
               </div>
               <div className="field">
                 <label className="field__label">Estado</label>
