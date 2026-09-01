@@ -18,6 +18,8 @@ export interface OpcionesFlujo {
   maxLineas?: number
   separacionVertical?: number
   separacionColumnas?: number
+  /** Número de la primera actividad; permite continuar la cuenta entre bloques. */
+  numeroInicial?: number
 }
 
 export interface NodoFlujo {
@@ -44,6 +46,7 @@ const POR_DEFECTO: Required<OpcionesFlujo> = {
   maxLineas: 3,
   separacionVertical: 34,
   separacionColumnas: 62,
+  numeroInicial: 1,
 }
 
 /** Parte un título en líneas sin cortar palabras. La última se recorta con «…». */
@@ -104,7 +107,7 @@ export function calcularFlujograma(titulos: string[], opciones: OpcionesFlujo = 
     const col = Math.floor(i / o.porColumna)
     const fila = i % o.porColumna
     return {
-      numero: i + 1,
+      numero: o.numeroInicial + i,
       lineas,
       x: col * (o.anchoCaja + o.separacionColumnas),
       y: fila * (alto + o.separacionVertical),
