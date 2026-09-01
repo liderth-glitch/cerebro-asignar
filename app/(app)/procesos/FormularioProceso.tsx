@@ -8,7 +8,7 @@ import IconoArchivo from '@/components/app/IconoArchivo'
 import BadgeEstado from '@/components/app/BadgeEstado'
 import { crearClienteNavegador } from '@/lib/supabase/client'
 import type { Rol, EstadoProceso } from '@/types'
-import { plantillaDeTipo, tipoUsaPasos, pistaPorTipo, TIPOS_CON_PASOS, type SeccionDoc } from '@/lib/documentos/plantillas'
+import { plantillaDeTipo, tipoUsaPasos, pistaPorTipo, type SeccionDoc } from '@/lib/documentos/plantillas'
 import SelectorCargos, { type CargoCatalogo, type PasoCargo } from './SelectorCargos'
 import ImportarPasosExcel, { type PasoImportado } from './ImportarPasosExcel'
 import { proximaRevisionAnual } from '@/lib/documentos/vigencia'
@@ -55,6 +55,7 @@ interface Props {
     id: string
     nombre: string
     objetivo: string
+    alcance?: string | null
     version: string
     estado: string
     gestion_id: string
@@ -93,6 +94,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
   const [nombre, setNombre] = useState(procesoExistente?.nombre ?? '')
   const [gestionId, setGestionId] = useState(gestionIdInicial)
   const [objetivo, setObjetivo] = useState(procesoExistente?.objetivo ?? '')
+  const [alcance, setAlcance] = useState(procesoExistente?.alcance ?? '')
   const [version, setVersion] = useState(procesoExistente?.version ?? '1.0')
   const [estado, setEstado] = useState<EstadoProceso>((procesoExistente?.estado as EstadoProceso) ?? 'borrador')
   const [pasos, setPasos] = useState<Paso[]>(
@@ -132,11 +134,6 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
   // El bloque de actividades se muestra si el tipo lo usa, o si el documento ya tiene pasos cargados
   const mostrarPasos = tipoUsaPasos(nombreTipo) || pasos.some(p => p.nombre || p.descripcion)
   const plantillaSugerida = plantillaDeTipo(nombreTipo)
-  // Un procedimiento o instructivo se documenta con el paso a paso; el bloque de
-  // secciones ahí solo confunde. Se mantiene visible si el documento ya tiene algo
-  // escrito: si no, quedaría inaccesible en el editor pero seguiría saliendo en el PDF.
-  const seccionesEscritas = secciones.some(s => s.titulo.trim() || s.contenido.trim())
-  const mostrarSecciones = !TIPOS_CON_PASOS.includes(nombreTipo ?? '') || seccionesEscritas
 
   function agregarSeccion(titulo = '') {
     setSecciones([...secciones, { titulo, contenido: '' }])
@@ -255,6 +252,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
         gestion_id: gestionId,
         ciudad: ciudad || null,
         objetivo: objetivo.trim(),
+        alcance: alcance.trim() || null,
         version,
         estado: estadoFinal,
         fecha_actualizacion: new Date().toISOString().split('T')[0],
@@ -433,6 +431,12 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
               <label className="field__label">Objetivo</label>
               <textarea className="ca-textarea" value={objetivo} onChange={e => setObjetivo(e.target.value)} placeholder="Una línea que explica para qué existe este proceso." />
             </div>
+            <div className="field">
+              <label className="field__label">Alcance</label>
+              <textarea className="ca-textarea" value={alcance} onChange={e => setAlcance(e.target.value)}
+                placeholder="Hasta dónde llega este documento: a quién aplica y qué cubre." />
+              <span className="field__hint">Si lo dejas vacío, el PDF genera una frase a partir de la gestión.</span>
+            </div>
           </div>
         </section>
 
@@ -490,7 +494,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
         </section>
 
         {/* Contenido del documento — secciones libres, con esqueleto sugerido por tipo */}
-        {!modoCliente && mostrarSecciones && (
+        {!modoCliente && (
           <section className="card card--padded">
             <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, marginBottom: 4, flexWrap: 'wrap' }}>
               <div>
