@@ -435,7 +435,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
               <label className="field__label">Alcance</label>
               <textarea className="ca-textarea" value={alcance} onChange={e => setAlcance(e.target.value)}
                 placeholder="Hasta dónde llega este documento: a quién aplica y qué cubre." />
-              <span className="field__hint">Si lo dejas vacío, el PDF genera una frase a partir de la gestión.</span>
+              <span className="field__hint">Si lo dejas vacío, el PDF dirá «No definido».</span>
             </div>
           </div>
         </section>

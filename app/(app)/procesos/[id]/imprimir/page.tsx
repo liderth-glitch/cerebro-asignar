@@ -158,14 +158,7 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
         {/* Alcance: gestión responsable */}
         <section className="doc-seccion">
           <h2>{nx()}. Alcance</h2>
-          {proceso.alcance?.trim() ? (
-            <p style={{ whiteSpace: 'pre-wrap' }}>{proceso.alcance}</p>
-          ) : (
-            <p>
-              Aplica a la gestión de <b>{gestion?.nombre ?? '—'}</b> de Asignar S.A.S.
-              {tipoDoc?.nombre ? ` Documento tipo ${tipoDoc.nombre.toLowerCase()}.` : ''}
-            </p>
-          )}
+          <p style={{ whiteSpace: 'pre-wrap' }}>{proceso.alcance?.trim() || 'No definido.'}</p>
         </section>
 
         {/* Secciones propias del documento (según su tipo) */}
