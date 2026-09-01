@@ -10,6 +10,7 @@ import PanelHistorial from './PanelHistorial'
 import DocumentosProceso from './DocumentosProceso'
 import BotonEliminarProceso from './BotonEliminarProceso'
 import PasoExpandible from '@/components/app/PasoExpandible'
+import Flujograma from '@/components/app/Flujograma'
 import type { PasoDetalle } from '@/components/app/PasoExpandible'
 import { calcularVigencia, textoVigencia } from '@/lib/documentos/vigencia'
 
@@ -265,6 +266,18 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
                 </div>
                 <span className="section-count">{pasos.length} pasos</span>
               </div>
+
+              {/* Flujograma: se arma con los títulos de los pasos ya escritos */}
+              {pasos.length > 1 && (
+                <div style={{
+                  border: '1px solid var(--divider)', borderRadius: 10,
+                  padding: 18, marginBottom: 18, overflowX: 'auto',
+                }}>
+                  <div className="page__eyebrow" style={{ marginBottom: 12 }}>Flujograma</div>
+                  <Flujograma titulos={pasos.map(s => s.nombre ?? "")} />
+                </div>
+              )}
+
               {pasos.length > 0 ? (
                 <ol style={{ listStyle: 'none', padding: 0, margin: 0 }}>
                   {pasos.map((s, i) => (

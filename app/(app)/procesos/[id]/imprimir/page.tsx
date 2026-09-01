@@ -5,6 +5,7 @@ import { crearClienteServidor } from '@/lib/supabase/server'
 import { obtenerSesion } from '@/lib/sesion'
 import Icono from '@/components/app/Icono'
 import BotonImprimir from './BotonImprimir'
+import Flujograma from '@/components/app/Flujograma'
 
 /** Fechas tipo DATE ('YYYY-MM-DD') → 'DD/MM/YYYY' sin pasar por Date (evita el corrimiento de zona horaria). */
 function fFecha(d?: string | null) {
@@ -158,10 +159,7 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
         {/* Alcance: gestión responsable */}
         <section className="doc-seccion">
           <h2>{nx()}. Alcance</h2>
-          <p>
-            Aplica a la gestión de <b>{gestion?.nombre ?? '—'}</b> de Asignar S.A.S.
-            {tipoDoc?.nombre ? ` Documento tipo ${tipoDoc.nombre.toLowerCase()}.` : ''}
-          </p>
+          <p style={{ whiteSpace: 'pre-wrap' }}>{proceso.alcance?.trim() || 'No definido.'}</p>
         </section>
 
         {/* Secciones propias del documento (según su tipo) */}
@@ -208,6 +206,13 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
             </section>
           </>
         ) : pasos.length > 0 ? (
+          <>
+          {pasos.length > 1 && (
+            <section className="doc-seccion">
+              <h2>{nx()}. Flujograma</h2>
+              <Flujograma titulos={pasos.map(p => p.nombre ?? "")} idPrefijo="flujo-pdf" />
+            </section>
+          )}
           <section className="doc-seccion">
             <h2>{nx()}. Desarrollo del procedimiento</h2>
             {/* Columnas exactas del formato oficial de Calidad */}
@@ -273,6 +278,7 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
               </table>
             </div>
           </section>
+          </>
         ) : null}
 
         {/* Documentos relacionados */}

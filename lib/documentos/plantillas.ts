@@ -17,7 +17,10 @@ export const TIPOS_CON_PASOS = ['Procedimiento', 'Instructivo']
 /** Plantillas por nombre de tipo (coincide con `tipos_documento.nombre`). */
 export const plantillasPorTipo: Record<string, string[]> = {
   Procedimiento: [
+    'Requisitos',
+    'Recursos',
     'Definiciones',
+    'Indicadores',
     'Condiciones generales',
     'Responsables',
   ],
