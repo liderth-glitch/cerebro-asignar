@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import Icono from '@/components/app/Icono'
+import { MODULOS } from '@/lib/modulos'
 
 interface Props {
   usuarioId: string
@@ -53,7 +54,7 @@ export default async function BandejaAprobacion({ usuarioId, esAdmin }: Props) {
   }
 
   const filas: Fila[] = []
-  if ((ausenciasPorAprobar ?? 0) > 0) {
+  if (MODULOS.ausencias && (ausenciasPorAprobar ?? 0) > 0) {
     filas.push({
       clave: 'ausencias',
       icono: 'inbox',
@@ -86,7 +87,7 @@ export default async function BandejaAprobacion({ usuarioId, esAdmin }: Props) {
       cuenta: docsAprobarAdmin ?? 0,
     })
   }
-  if (esAdmin && (ausenciasSegundoTH ?? 0) > 0) {
+  if (MODULOS.ausencias && esAdmin && (ausenciasSegundoTH ?? 0) > 0) {
     filas.push({
       clave: 'segunda',
       icono: 'shield',

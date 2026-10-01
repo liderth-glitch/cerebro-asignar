@@ -36,6 +36,34 @@
 
 ---
 
+## Enfoque en el núcleo — 2026-10-01 | Claude-Simon
+
+Cerebro vuelve a su razón de ser: **procesos y procedimientos / gestión documental**. Se había dispersado en muchos módulos y casi nadie los usaba (139 usuarios activos, 3 con ingreso en los últimos 30 días; el uso real está en procedimientos y comités).
+
+**Se queda visible:** Procesos y Procedimientos · Revisión documental · Manuales de cargo · Políticas · Glosario · Buscar · Comités · administración de gestiones, usuarios, organigrama, políticas, homologación de cargos y aprobaciones.
+
+**Queda oculto, no borrado** (código, tablas y datos intactos):
+
+| Módulo | Etapa | Destino |
+|---|---|---|
+| Desempeño y PDI | 3 | **Se traslada a una plataforma aparte.** Paquete completo en `DESARROLLO/EVALUACIÓN POR COMPETENCIAS/TRASLADO_DESDE_CEREBRO/` (brief, catálogos, esquema y copia del código) |
+| Permisos y ausencias | 15 | Oculto: no se estaba usando |
+| Acogida laboral, seguimiento, jornadas de inducción y quizzes | 8 | Oculto |
+| Capacitaciones | 9 | Oculto |
+
+- [x] Interruptores en `lib/modulos.ts`: un `true`/`false` por módulo. Para reactivar uno basta cambiar su valor
+- [x] Fuera del menú lateral, incluidas sus pantallas de administración
+- [x] Las rutas de un módulo apagado redirigen al inicio (`lib/supabase/middleware.ts`), para que un enlace viejo o una notificación antigua no lleven a una pantalla que ya no está en el menú
+- [x] Tablero: fuera las tarjetas de cuestionarios, ausencias, PDI y ciclo de evaluación. «Salud del equipo» queda solo con comités
+- [x] Fuera el botón «Iniciar acogida» de la ficha del usuario
+- [x] **No se tocó la base de datos** ni nada de procedimientos, homologación, usuarios, políticas o comités
+- [x] Punto de retorno: etiqueta de git `antes-de-enfocar-nucleo`
+
+> **Comités** se queda por ahora; Simón evalúa llevarlo también a otro lugar más adelante.
+> Las etapas de abajo que hablan de los módulos ocultos se conservan como registro de lo construido.
+
+---
+
 ## Etapa 1 — Repositorio de Procesos (completada)
 
 Base de la plataforma: autenticación, roles y el núcleo del repositorio de conocimiento.

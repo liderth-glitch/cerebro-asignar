@@ -1,5 +1,6 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
+import { esRutaOculta } from '@/lib/modulos'
 
 export async function actualizarSesion(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -39,6 +40,15 @@ export async function actualizarSesion(request: NextRequest) {
   if (user && esRutaPublica) {
     const url = request.nextUrl.clone()
     url.pathname = '/dashboard'
+    return NextResponse.redirect(url)
+  }
+
+  // Módulos apagados (lib/modulos.ts): un enlace viejo o una notificación antigua
+  // no deben dejar entrar a una pantalla que ya no está en el menú.
+  if (esRutaOculta(request.nextUrl.pathname)) {
+    const url = request.nextUrl.clone()
+    url.pathname = '/dashboard'
+    url.search = ''
     return NextResponse.redirect(url)
   }
 

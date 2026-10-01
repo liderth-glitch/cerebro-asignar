@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import Icono from '@/components/app/Icono'
 import { badgePct, colorHeatmap } from '@/lib/comites/puntaje'
+import { MODULOS } from '@/lib/modulos'
 
 /** Iniciales locales — evita import de lib/sesion que trae dependencias de servidor. */
 function iniciales(nombre: string): string {
@@ -82,7 +83,8 @@ export default function ClienteSaludEquipo({ filas, cicloNombre, semanaActual, a
           )}
         </div>
         <div className="hstack" style={{ gap: 6 }}>
-          {[
+          {/* Con desempeño apagado solo queda la vista de comités: sin pestañas */}
+          {MODULOS.desempeno && [
             { clave: 'comites' as const, label: 'Comités', icono: 'check' },
             { clave: 'desempeno' as const, label: 'Desempeño', icono: 'target' },
             { clave: 'pdis' as const, label: 'PDIs', icono: 'chart' },

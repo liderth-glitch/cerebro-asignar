@@ -207,12 +207,6 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
           </>
         ) : pasos.length > 0 ? (
           <>
-          {pasos.length > 1 && (
-            <section className="doc-seccion">
-              <h2>{nx()}. Flujograma</h2>
-              <Flujograma titulos={pasos.map(p => p.nombre ?? "")} idPrefijo="flujo-pdf" />
-            </section>
-          )}
           <section className="doc-seccion">
             <h2>{nx()}. Desarrollo del procedimiento</h2>
             {/* Columnas exactas del formato oficial de Calidad */}
@@ -278,6 +272,12 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
               </table>
             </div>
           </section>
+          {pasos.length > 1 && (
+            <section className="doc-seccion">
+              <h2>{nx()}. Flujograma</h2>
+              <Flujograma titulos={pasos.map(p => p.nombre ?? "")} idPrefijo="flujo-pdf" />
+            </section>
+          )}
           </>
         ) : null}
 

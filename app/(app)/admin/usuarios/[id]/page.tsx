@@ -4,6 +4,7 @@ import Topbar from '@/components/app/Topbar'
 import ClienteEditorUsuario from './ClienteEditorUsuario'
 import BotonAcogida from './BotonAcogida'
 import { obtenerIniciales } from '@/lib/sesion'
+import { MODULOS } from '@/lib/modulos'
 import type { SesionUsuario, Rol } from '@/types'
 
 export default async function PaginaEditarUsuario({ params }: { params: Promise<{ id: string }> }) {
@@ -60,7 +61,9 @@ export default async function PaginaEditarUsuario({ params }: { params: Promise<
           posiblesJefes={posiblesJefes ?? []}
           gestiones={gestiones ?? []}
         />
-        <BotonAcogida usuarioId={id} nombre={usuario.nombre} acogidaAbierta={acogida ?? null} />
+        {MODULOS.acogida && (
+          <BotonAcogida usuarioId={id} nombre={usuario.nombre} acogidaAbierta={acogida ?? null} />
+        )}
       </main>
     </>
   )
