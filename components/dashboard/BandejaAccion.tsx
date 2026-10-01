@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import Icono from '@/components/app/Icono'
+import { MODULOS } from '@/lib/modulos'
 
 interface Props {
   usuarioId: string
@@ -61,7 +62,7 @@ export default async function BandejaAccion({ usuarioId, gestionId, esLider, esA
 
   const tarjetas: TarjetaAccion[] = []
 
-  if ((cuestionariosPendientes ?? 0) > 0) {
+  if (MODULOS.desempeno && (cuestionariosPendientes ?? 0) > 0) {
     tarjetas.push({
       clave: 'cuestionarios',
       icono: 'target',
@@ -87,7 +88,7 @@ export default async function BandejaAccion({ usuarioId, gestionId, esLider, esA
     })
   }
 
-  if ((ausenciasEsperando ?? 0) > 0) {
+  if (MODULOS.ausencias && (ausenciasEsperando ?? 0) > 0) {
     tarjetas.push({
       clave: 'ausencias',
       icono: 'calendar',
@@ -113,7 +114,7 @@ export default async function BandejaAccion({ usuarioId, gestionId, esLider, esA
         cuenta: docsAprobarAdmin ?? 0,
       })
     }
-    if ((ausenciasSegundoTH ?? 0) > 0) {
+    if (MODULOS.ausencias && (ausenciasSegundoTH ?? 0) > 0) {
       tarjetas.push({
         clave: 'ausencias-th',
         icono: 'shield',
@@ -139,7 +140,7 @@ export default async function BandejaAccion({ usuarioId, gestionId, esLider, esA
           <div>
             <div className="dash-empty__title">Tu día está limpio.</div>
             <div className="dash-empty__msg">
-              No tienes cuestionarios, compromisos ni solicitudes pendientes.
+              No tienes pendientes por atender.
             </div>
           </div>
         </div>

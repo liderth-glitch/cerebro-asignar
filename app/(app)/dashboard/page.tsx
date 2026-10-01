@@ -14,6 +14,7 @@ import MiComites from '@/components/dashboard/MiComites'
 import NovedadesGestion from '@/components/dashboard/NovedadesGestion'
 import UltimasNotificaciones from '@/components/dashboard/UltimasNotificaciones'
 import { crearClienteServidor } from '@/lib/supabase/server'
+import { MODULOS } from '@/lib/modulos'
 
 /** Dashboard personalizado según rol.
  *  - Colaborador: mi día (pendientes) + mi desempeño + novedades de mi gestión
@@ -64,9 +65,11 @@ export default async function PaginaDashboard() {
             <Suspense fallback={null}>
               <MiComites usuarioId={sesion.id} gestionId={sesion.gestion_id} />
             </Suspense>
-            <Suspense fallback={null}>
-              <MiPDI usuarioId={sesion.id} />
-            </Suspense>
+            {MODULOS.desempeno && (
+              <Suspense fallback={null}>
+                <MiPDI usuarioId={sesion.id} />
+              </Suspense>
+            )}
           </div>
         </div>
 
@@ -102,9 +105,11 @@ export default async function PaginaDashboard() {
             <Suspense fallback={<StatsAdminSkeleton />}>
               <StatsAdmin />
             </Suspense>
-            <Suspense fallback={null}>
-              <KPICicloActivo />
-            </Suspense>
+            {MODULOS.desempeno && (
+              <Suspense fallback={null}>
+                <KPICicloActivo />
+              </Suspense>
+            )}
           </div>
         )}
 

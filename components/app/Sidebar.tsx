@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import Icono from './Icono'
 import { useShell } from './AppShell'
+import { MODULOS } from '@/lib/modulos'
 import type { Rol } from '@/types'
 
 interface SidebarProps {
@@ -76,10 +77,12 @@ export default function Sidebar({ rol, aprobacionesPendientes = 0, tieneEquipo =
           <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
         </Link>
 
-        <Link href="/desempeno" className={`nav-item ${activa('/desempeno') ? 'is-active' : ''}`} onClick={navegar}>
-          <Icono nombre="target" className="nav-item__icon" /> Desempeño
-          <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
-        </Link>
+        {MODULOS.desempeno && (
+          <Link href="/desempeno" className={`nav-item ${activa('/desempeno') ? 'is-active' : ''}`} onClick={navegar}>
+            <Icono nombre="target" className="nav-item__icon" /> Desempeño
+            <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
+          </Link>
+        )}
 
         <Link href="/buscar" className={`nav-item ${activa('/buscar') ? 'is-active' : ''}`} onClick={navegar}>
           <Icono nombre="search" className="nav-item__icon" /> Buscar
@@ -99,27 +102,33 @@ export default function Sidebar({ rol, aprobacionesPendientes = 0, tieneEquipo =
           <Icono nombre="check" className="nav-item__icon" /> Comités
         </Link>
 
-        <Link href="/ausencias" className={`nav-item ${activa('/ausencias') ? 'is-active' : ''}`} onClick={navegar}>
-          <Icono nombre="calendar" className="nav-item__icon" /> Permisos y Ausencias
-          <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
-        </Link>
+        {MODULOS.ausencias && (
+          <Link href="/ausencias" className={`nav-item ${activa('/ausencias') ? 'is-active' : ''}`} onClick={navegar}>
+            <Icono nombre="calendar" className="nav-item__icon" /> Permisos y Ausencias
+            <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
+          </Link>
+        )}
 
-        <Link href="/onboarding" className={`nav-item ${ruta === '/onboarding' ? 'is-active' : ''}`} onClick={navegar}>
-          <Icono nombre="bookmark" className="nav-item__icon" /> Mi Acogida
-          <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
-        </Link>
+        {MODULOS.acogida && (
+          <Link href="/onboarding" className={`nav-item ${ruta === '/onboarding' ? 'is-active' : ''}`} onClick={navegar}>
+            <Icono nombre="bookmark" className="nav-item__icon" /> Mi Acogida
+            <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
+          </Link>
+        )}
 
-        {(esAdmin || tieneEquipo) && (
+        {MODULOS.acogida && (esAdmin || tieneEquipo) && (
           <Link href="/onboarding/seguimiento" className={`nav-item ${activa('/onboarding/seguimiento') ? 'is-active' : ''}`} onClick={navegar}>
             <Icono nombre="inbox" className="nav-item__icon" /> Seguimiento acogida
             <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
           </Link>
         )}
 
-        <Link href="/capacitaciones" className={`nav-item ${activa('/capacitaciones') ? 'is-active' : ''}`} onClick={navegar}>
-          <Icono nombre="star" className="nav-item__icon" /> Capacitaciones
-          <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
-        </Link>
+        {MODULOS.capacitaciones && (
+          <Link href="/capacitaciones" className={`nav-item ${activa('/capacitaciones') ? 'is-active' : ''}`} onClick={navegar}>
+            <Icono nombre="star" className="nav-item__icon" /> Capacitaciones
+            <span className="nav-item__pill nav-item__pill--brand">Nuevo</span>
+          </Link>
+        )}
 
         {(esAdmin || esLider) && (
           <div className="sidebar__section-label">{esAdmin ? 'Administración' : 'Mi Gestión'}</div>
@@ -143,21 +152,31 @@ export default function Sidebar({ rol, aprobacionesPendientes = 0, tieneEquipo =
             <Link href="/admin/homologacion" className={`nav-item ${activa('/admin/homologacion') ? 'is-active' : ''}`} onClick={navegar}>
               <Icono nombre="users" className="nav-item__icon" /> Homologar cargos
             </Link>
-            <Link href="/admin/induccion" className={`nav-item ${activa('/admin/induccion') ? 'is-active' : ''}`} onClick={navegar}>
-              <Icono nombre="users" className="nav-item__icon" /> Jornadas de inducción
-            </Link>
-            <Link href="/admin/quizzes" className={`nav-item ${activa('/admin/quizzes') ? 'is-active' : ''}`} onClick={navegar}>
-              <Icono nombre="check" className="nav-item__icon" /> Quizzes de inducción
-            </Link>
-            <Link href="/admin/onboarding" className={`nav-item ${activa('/admin/onboarding') ? 'is-active' : ''}`} onClick={navegar}>
-              <Icono nombre="clipboard" className="nav-item__icon" /> Acogida laboral
-            </Link>
-            <Link href="/admin/capacitaciones" className={`nav-item ${activa('/admin/capacitaciones') ? 'is-active' : ''}`} onClick={navegar}>
-              <Icono nombre="star" className="nav-item__icon" /> Catálogo capacitaciones
-            </Link>
-            <Link href="/admin/tipos-ausencia" className={`nav-item ${activa('/admin/tipos-ausencia') ? 'is-active' : ''}`} onClick={navegar}>
-              <Icono nombre="list" className="nav-item__icon" /> Tipos de ausencia
-            </Link>
+            {MODULOS.acogida && (
+              <Link href="/admin/induccion" className={`nav-item ${activa('/admin/induccion') ? 'is-active' : ''}`} onClick={navegar}>
+                <Icono nombre="users" className="nav-item__icon" /> Jornadas de inducción
+              </Link>
+            )}
+            {MODULOS.acogida && (
+              <Link href="/admin/quizzes" className={`nav-item ${activa('/admin/quizzes') ? 'is-active' : ''}`} onClick={navegar}>
+                <Icono nombre="check" className="nav-item__icon" /> Quizzes de inducción
+              </Link>
+            )}
+            {MODULOS.acogida && (
+              <Link href="/admin/onboarding" className={`nav-item ${activa('/admin/onboarding') ? 'is-active' : ''}`} onClick={navegar}>
+                <Icono nombre="clipboard" className="nav-item__icon" /> Acogida laboral
+              </Link>
+            )}
+            {MODULOS.capacitaciones && (
+              <Link href="/admin/capacitaciones" className={`nav-item ${activa('/admin/capacitaciones') ? 'is-active' : ''}`} onClick={navegar}>
+                <Icono nombre="star" className="nav-item__icon" /> Catálogo capacitaciones
+              </Link>
+            )}
+            {MODULOS.ausencias && (
+              <Link href="/admin/tipos-ausencia" className={`nav-item ${activa('/admin/tipos-ausencia') ? 'is-active' : ''}`} onClick={navegar}>
+                <Icono nombre="list" className="nav-item__icon" /> Tipos de ausencia
+              </Link>
+            )}
             <Link href="/admin/aprobaciones" className={`nav-item ${activa('/admin/aprobaciones') ? 'is-active' : ''}`} onClick={navegar}>
               <Icono nombre="inbox" className="nav-item__icon" /> Aprobaciones
               {aprobacionesPendientes > 0 && (
