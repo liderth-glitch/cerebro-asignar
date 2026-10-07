@@ -10,7 +10,8 @@ import { crearClienteNavegador } from '@/lib/supabase/client'
 import type { Rol, EstadoProceso } from '@/types'
 import { plantillaDeTipo, tipoUsaPasos, pistaPorTipo, type SeccionDoc } from '@/lib/documentos/plantillas'
 import SelectorCargos, { type CargoCatalogo, type PasoCargo } from './SelectorCargos'
-import ImportarPasosExcel, { type PasoImportado } from './ImportarPasosExcel'
+import ImportarPasosExcel, { type PasoImportado, type Homologacion } from './ImportarPasosExcel'
+import type { BandaRef } from '../admin/FormNuevoCargo'
 import { proximaRevisionAnual } from '@/lib/documentos/vigencia'
 import { subirDocumentoProceso } from './acciones-documentos'
 
@@ -51,6 +52,9 @@ interface Props {
   rol: Rol
   tiposDocumento: { id: string; nombre: string; prefijo: string }[]
   cargos: CargoCatalogo[]
+  /** Para que el importador de Excel reconozca cargos ya homologados y TH cree los que falten */
+  homologaciones: Homologacion[]
+  bandas: BandaRef[]
   procesoExistente?: {
     id: string
     nombre: string
@@ -85,11 +89,13 @@ const periodicidades = [
   'Bimestral', 'Trimestral', 'Semestral', 'Anual', 'Ocasional', 'Por demanda',
 ]
 
-export default function FormularioProceso({ gestiones, gestionIdInicial, rol, tiposDocumento, cargos, procesoExistente }: Props) {
+export default function FormularioProceso({ gestiones, gestionIdInicial, rol, tiposDocumento, cargos, homologaciones, bandas, procesoExistente }: Props) {
   const router = useRouter()
   const supabase = crearClienteNavegador()
   const esAdmin = rol === 'admin'
   const esNuevo = !procesoExistente
+  // Crece si TH crea un cargo desde el importador, sin recargar la página
+  const [catalogoCargos, setCatalogoCargos] = useState<CargoCatalogo[]>(cargos)
 
   const [nombre, setNombre] = useState(procesoExistente?.nombre ?? '')
   const [gestionId, setGestionId] = useState(gestionIdInicial)
@@ -672,7 +678,15 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
               <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Pasos del procedimiento</h3>
               <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Arrastra para reordenar</span>
             </div>
-            <ImportarPasosExcel hayPasos={pasos.length > 0} onImportar={importarPasos} />
+            <ImportarPasosExcel
+              hayPasos={pasos.length > 0}
+              onImportar={importarPasos}
+              cargos={catalogoCargos}
+              homologaciones={homologaciones}
+              bandas={bandas}
+              esAdmin={esAdmin}
+              onCargoCreado={c => setCatalogoCargos(prev => [...prev, c])}
+            />
           </div>
           <div className="vstack" style={{ gap: 10 }}>
             {pasos.map((paso, i) => (
@@ -702,27 +716,37 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
                 </div>
 
                 <div className="paso-grid">
-                  <div className="field paso-grid--full">
-                    <label className="field__label">Procedimiento</label>
-                    <textarea
-                      className="ca-textarea" style={{ minHeight: 60 }}
-                      placeholder="Describe cómo se realiza esta actividad…"
-                      value={paso.descripcion}
-                      onChange={e => actualizarPaso(i, 'descripcion', e.target.value)}
-                    />
-                  </div>
                   <SelectorCargos
-                    cargos={cargos}
+                    cargos={catalogoCargos}
                     gestiones={gestiones}
                     gestionActualId={gestionId}
                     seleccion={paso.cargos}
                     textoHeredado={paso.cargo_responsable}
                     alCambiar={sig => setPasos(pasos.map((p, j) => j === i ? { ...p, cargos: sig } : p))}
                   />
+                  <div className="field paso-grid--full">
+                    <label className="field__label">
+                      {/* Los procedimientos de antes traen todo aquí; se invita a pasarlo a cada cargo */}
+                      {paso.descripcion.trim() && !paso.cargos.some(c => c.descripcion.trim())
+                        ? 'Descripción general (pásala al recuadro de cada cargo)'
+                        : 'Otros participantes o detalle (opcional)'}
+                    </label>
+                    <textarea
+                      className="ca-textarea" style={{ minHeight: 48 }}
+                      placeholder="Lo que no corresponde a un cargo del catálogo, como lo que hace el cliente…"
+                      value={paso.descripcion}
+                      onChange={e => actualizarPaso(i, 'descripcion', e.target.value)}
+                    />
+                    <span className="field__hint">Qué hace, cómo, dónde y cuándo va en el recuadro de cada cargo, arriba.</span>
+                  </div>
                   <div className="field">
                     <label className="field__label">Periodicidad</label>
                     <select className="ca-select ca-select--sm" value={paso.periodicidad} onChange={e => actualizarPaso(i, 'periodicidad', e.target.value)}>
                       <option value="">Seleccionar…</option>
+                      {/* La que viene del Excel («Por requerimiento») se conserva aunque no esté en la lista */}
+                      {paso.periodicidad && !periodicidades.includes(paso.periodicidad) && (
+                        <option value={paso.periodicidad}>{paso.periodicidad}</option>
+                      )}
                       {periodicidades.map(p => <option key={p}>{p}</option>)}
                     </select>
                   </div>
@@ -809,8 +833,8 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
           </section>
         )}
 
-        {/* Acciones */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, padding: '20px 0 0', borderTop: '1px solid var(--divider)' }}>
+        {/* Acciones: barra fija abajo, siempre a la vista sin bajar hasta el final */}
+        <div className="barra-guardar">
           <Link
             href={procesoExistente ? `/procesos/${procesoExistente.id}` : `/gestiones/${gestionId}`}
             className="btn btn--ghost"

@@ -4,6 +4,7 @@ import { obtenerSesionAdmin } from '@/lib/sesion'
 import Topbar from '@/components/app/Topbar'
 import Icono from '@/components/app/Icono'
 import ClienteOrganigrama, { type Persona } from './ClienteOrganigrama'
+import BotonNuevoCargo from '../FormNuevoCargo'
 
 function uno<T>(v: T | T[] | null | undefined): T | null {
   return Array.isArray(v) ? (v[0] ?? null) : (v ?? null)
@@ -13,13 +14,14 @@ export default async function AdminOrganigrama() {
   const sesion = await obtenerSesionAdmin()
   const supabase = await crearClienteServidor()
 
-  const [{ data: usuariosRaw }, { data: gestiones }] = await Promise.all([
+  const [{ data: usuariosRaw }, { data: gestiones }, { data: bandas }] = await Promise.all([
     supabase
       .from('usuarios')
       .select('id, nombre, rol, sede, jefe_id, gestion_id, cargo:cargos(nombre), gestion:gestiones(nombre)')
       .eq('activo', true)
       .order('nombre'),
     supabase.from('gestiones').select('id, nombre, lider_id').eq('activa', true).order('nombre'),
+    supabase.from('bandas').select('codigo, nombre').order('orden'),
   ])
 
   const lideresGestion = new Set(
@@ -56,9 +58,13 @@ export default async function AdminOrganigrama() {
               líder nacional y otro de ciudad: lo que manda es esta cadena.
             </p>
           </div>
-          <Link href="/admin/usuarios" className="btn btn--ghost btn--sm">
-            <Icono nombre="users" className="icon icon--sm" /> Usuarios
-          </Link>
+          <div className="hstack" style={{ gap: 8, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            {/* Los cargos que faltan se crean aquí y aparecen de inmediato en todo Cerebro */}
+            <BotonNuevoCargo bandas={bandas ?? []} />
+            <Link href="/admin/usuarios" className="btn btn--ghost btn--sm">
+              <Icono nombre="users" className="icon icon--sm" /> Usuarios
+            </Link>
+          </div>
         </div>
 
         <div className="grid-stats" style={{ marginBottom: 20 }}>

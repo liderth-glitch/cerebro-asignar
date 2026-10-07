@@ -1520,3 +1520,13 @@ select.ca-select, select.input { appearance: none; background-image: url("data:i
   }
   .doc-head__logo { max-width: 96px; }
 }
+
+/* Guardar / publicar del editor: fija abajo para no tener que bajar hasta el final */
+.barra-guardar {
+  position: sticky; bottom: 0; z-index: 20;
+  display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 0; margin-top: 4px;
+  background: var(--bg);
+  border-top: 1px solid var(--divider);
+  box-shadow: 0 -8px 16px -12px rgba(0, 18, 51, 0.25);
+}
