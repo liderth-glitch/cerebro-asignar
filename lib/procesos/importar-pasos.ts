@@ -173,6 +173,31 @@ export function partirPorCargo(texto: string): { bloques: BloqueCargo[]; resto: 
   return { bloques, resto: limpio.slice(0, inicios[0].desde).trim() }
 }
 
+/**
+ * Lo que hay que mostrar del texto de la actividad cuando ya tiene cargos con
+ * su propio texto. Quita los bloques que repiten lo de algún cargo: pasa con
+ * los procedimientos importados antes de que existiera la división por cargo,
+ * donde el texto se copió a mano a cada cargo y quedó también en la actividad.
+ * Lo que no está en ningún cargo (p. ej. el cliente) se conserva.
+ */
+export function restoSinRepetir(
+  descripcion: string,
+  textosCargos: string[],
+): { bloques: BloqueCargo[]; resto: string } {
+  const { bloques, resto } = partirPorCargo(descripcion)
+  const enCargos = textosCargos.map(norm).filter(Boolean)
+  const repetido = (texto: string) => {
+    const n = norm(texto)
+    if (!n) return true
+    // El texto corto de un cargo («ok») no debe tapar un bloque largo que solo lo contiene
+    return enCargos.some(c => c.includes(n) || (c.length >= 40 && n.includes(c)))
+  }
+  return {
+    bloques: bloques.filter(b => !repetido(b.texto)),
+    resto: repetido(resto) ? '' : resto,
+  }
+}
+
 /** Palabras que no distinguen un cargo de otro: «Auxiliar Sala 1» = «Auxiliar de Sala 1». */
 const CONECTORES = new Set(['de', 'del', 'la', 'las', 'el', 'los'])
 

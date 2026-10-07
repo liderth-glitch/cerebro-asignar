@@ -841,7 +841,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
           >
             Cancelar
           </Link>
-          <div className="hstack" style={{ gap: 10 }}>
+          <div className="barra-guardar__acciones">
             <button className="btn btn--secondary" disabled={guardando} onClick={() => guardar('borrador')}>
               Guardar como borrador
             </button>
