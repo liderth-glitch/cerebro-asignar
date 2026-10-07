@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import Icono from '@/components/app/Icono'
 import TextoCargo from '@/components/app/TextoCargo'
+import { restoSinRepetir } from '@/lib/procesos/importar-pasos'
 
 export type PasoCargoVista = {
   tipo: string
@@ -44,6 +45,32 @@ function FilaInfo({ label, valor }: { label: string; valor: string | null }) {
   )
 }
 
+/** Un cargo dentro del procedimiento: el nombre manda, las preguntas van debajo. */
+function BloqueCargo({ nombre, apoyo, detalle, texto }: {
+  nombre: string; apoyo: boolean; detalle?: string; texto: string
+}) {
+  return (
+    <div style={{
+      padding: '12px 14px', borderRadius: 10, background: 'var(--surface-sunken)',
+      borderLeft: `3px solid ${apoyo ? 'var(--border-strong)' : 'var(--primary)'}`,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
+        <Icono nombre={apoyo ? 'handshake' : 'users'} className="icon icon--sm"
+          style={{ color: apoyo ? 'var(--text-3)' : 'var(--primary)', flexShrink: 0 }} />
+        <span style={{ fontSize: 15, fontWeight: 700, color: apoyo ? 'var(--text)' : 'var(--on-primary-soft)' }}>
+          {nombre}
+        </span>
+        {detalle && (
+          <span className="badge badge--neutral badge--no-dot" style={{ fontSize: 11 }}>{detalle}</span>
+        )}
+      </div>
+      <div style={{ fontSize: 13.5, lineHeight: 1.55, color: 'var(--text)' }}>
+        <TextoCargo texto={texto} />
+      </div>
+    </div>
+  )
+}
+
 export default function PasoExpandible({ paso, index, total }: { paso: PasoDetalle; index: number; total: number }) {
   const [abierto, setAbierto] = useState(false)
   const cargosConTexto = [...(paso.paso_cargos ?? [])]
@@ -51,6 +78,8 @@ export default function PasoExpandible({ paso, index, total }: { paso: PasoDetal
     .filter(c => c.descripcion?.trim() && uno(c.cargo)?.nombre)
   const tieneDetalle = paso.entradas || paso.periodicidad || paso.salidas || paso.acuerdo_servicio || paso.tiempos
     || cargosConTexto.length > 0 || (paso.nombre && paso.descripcion)
+  // También parte por cargo el texto de los procedimientos de antes, que aún no tienen cargos con texto
+  const otros = restoSinRepetir(paso.descripcion ?? '', cargosConTexto.map(c => c.descripcion ?? ''))
 
   return (
     <li style={{
@@ -157,37 +186,30 @@ export default function PasoExpandible({ paso, index, total }: { paso: PasoDetal
           gridTemplateColumns: '1fr 1fr',
           gap: '14px 24px',
         }}>
-          {/* Qué hace cada cargo: el procedimiento se ancla al cargo, no a una descripción general */}
-          {cargosConTexto.length > 0 && (
-            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {/* Procedimiento: anclado a cada cargo, sin descripción general que lo repita */}
+          {(cargosConTexto.length > 0 || otros.bloques.length > 0 || (paso.nombre && otros.resto)) && (
+            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 10 }}>
               <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)' }}>
-                Qué hace cada cargo
+                Procedimiento
               </span>
               {cargosConTexto.map((c, i) => {
                 const gestion = uno(c.gestion_apoyo)
                 return (
-                  <div key={i} style={{ fontSize: 13.5, lineHeight: 1.5, paddingLeft: 12, borderLeft: '2px solid var(--primary-soft)' }}>
-                    <div style={{ fontWeight: 700, marginBottom: 2 }}>
-                      {uno(c.cargo)?.nombre}
-                      {c.tipo === 'apoyo' && (
-                        <span style={{ fontWeight: 500, color: 'var(--text-3)' }}> · apoyo{gestion ? ` de ${gestion.nombre}` : ''}</span>
-                      )}
-                    </div>
-                    <TextoCargo texto={c.descripcion ?? ''} />
-                  </div>
+                  <BloqueCargo key={`c${i}`} nombre={uno(c.cargo)?.nombre ?? ''} apoyo={c.tipo === 'apoyo'}
+                    detalle={c.tipo === 'apoyo' ? `apoyo${gestion ? ` de ${gestion.nombre}` : ''}` : undefined}
+                    texto={c.descripcion ?? ''} />
                 )
               })}
-            </div>
-          )}
-          {/* Lo que no es de un cargo del catálogo (p. ej. el cliente) o la descripción de antes */}
-          {paso.nombre && paso.descripcion && (
-            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)' }}>
-                {cargosConTexto.length > 0 ? 'Descripción' : 'Procedimiento'}
-              </span>
-              <span style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.5 }}>
-                <TextoCargo texto={paso.descripcion} />
-              </span>
+              {/* Participantes que no son un cargo del catálogo (p. ej. el cliente) */}
+              {otros.bloques.map((b, i) => (
+                <BloqueCargo key={`o${i}`} nombre={b.nombres.join(' / ')} apoyo={b.tipo === 'apoyo'}
+                  detalle={b.tipo === 'apoyo' ? 'apoyo' : undefined} texto={b.texto} />
+              ))}
+              {paso.nombre && otros.resto && (
+                <div style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.5 }}>
+                  <TextoCargo texto={otros.resto} />
+                </div>
+              )}
             </div>
           )}
           <FilaInfo label="Entradas" valor={paso.entradas} />

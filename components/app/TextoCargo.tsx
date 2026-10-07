@@ -26,7 +26,10 @@ export default function TextoCargo({ texto, compacto = false }: { texto: string;
       {intro && <span style={{ display: 'block', marginBottom: compacto ? 1 : 4 }}>{intro}</span>}
       {partes.map((p, i) => (
         <span key={i} style={{ display: 'block', marginTop: compacto ? 1 : 3 }}>
-          <b>{p.pregunta}</b> {p.respuesta}
+          {compacto
+            ? <b>{p.pregunta}</b>
+            : <span style={{ fontWeight: 600, color: 'var(--text-2)' }}>{p.pregunta}</span>}{' '}
+          {p.respuesta}
         </span>
       ))}
     </span>

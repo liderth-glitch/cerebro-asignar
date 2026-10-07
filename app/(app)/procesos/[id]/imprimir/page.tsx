@@ -7,6 +7,7 @@ import Icono from '@/components/app/Icono'
 import BotonImprimir from './BotonImprimir'
 import Flujograma from '@/components/app/Flujograma'
 import TextoCargo from '@/components/app/TextoCargo'
+import { restoSinRepetir } from '@/lib/procesos/importar-pasos'
 
 /** Fechas tipo DATE ('YYYY-MM-DD') → 'DD/MM/YYYY' sin pasar por Date (evita el corrimiento de zona horaria). */
 function fFecha(d?: string | null) {
@@ -229,6 +230,8 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
                 <tbody>
                   {pasos.map((p, i) => {
                     const cargos = [...(p.paso_cargos ?? [])].sort((a, b) => a.orden - b.orden)
+                    // El texto de la actividad sin lo que ya está en cada cargo: no se repite en el PDF
+                    const otros = restoSinRepetir(p.descripcion ?? '', cargos.map(c => c.descripcion ?? ''))
                     return (
                       <tr key={p.id}>
                         <td className="doc-tabla__num">{i + 1}</td>
@@ -252,7 +255,14 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
                                   </div>
                                 )
                               })}
-                              {p.descripcion && <TextoCargo texto={p.descripcion} compacto />}
+                              {otros.bloques.map((b, j) => (
+                                <div key={`o${j}`} style={{ marginBottom: 4 }}>
+                                  <b>{b.nombres.join(' / ')}</b>
+                                  {b.tipo === 'apoyo' && <span className="doc-dato"> · apoyo</span>}
+                                  <TextoCargo texto={b.texto} compacto />
+                                </div>
+                              ))}
+                              {otros.resto && <TextoCargo texto={otros.resto} compacto />}
                             </>
                           ) : (
                             <>
