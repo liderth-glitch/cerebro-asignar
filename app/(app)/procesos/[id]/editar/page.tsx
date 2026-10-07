@@ -25,10 +25,12 @@ export default async function PaginaEditarProceso({ params }: { params: Promise<
     redirect(`/procesos/${id}`)
   }
 
-  const [{ data: gestiones }, { data: tiposDoc }, { data: cargos }] = await Promise.all([
+  const [{ data: gestiones }, { data: tiposDoc }, { data: cargos }, { data: homologaciones }, { data: bandas }] = await Promise.all([
     supabase.from('gestiones').select('id, nombre').eq('activa', true).order('nombre'),
     supabase.from('tipos_documento').select('id, nombre, prefijo').order('orden'),
     supabase.from('cargos').select('id, nombre, banda').order('nombre'),
+    supabase.from('cargo_homologacion').select('texto_muestra, cargo_id, clase'),
+    supabase.from('bandas').select('codigo, nombre').order('orden'),
   ])
 
   type PasoCargoRaw = {
@@ -69,6 +71,8 @@ export default async function PaginaEditarProceso({ params }: { params: Promise<
           rol={sesion.rol}
           tiposDocumento={tiposDoc ?? []}
           cargos={cargos ?? []}
+          homologaciones={homologaciones ?? []}
+          bandas={bandas ?? []}
           procesoExistente={{
             id: proceso.id,
             nombre: proceso.nombre,

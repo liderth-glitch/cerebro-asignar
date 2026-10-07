@@ -3,15 +3,17 @@ import { obtenerSesionAdmin } from '@/lib/sesion'
 import Topbar from '@/components/app/Topbar'
 import Icono from '@/components/app/Icono'
 import FilaHomologacion, { type TextoPendiente, type CargoOpc } from './FilaHomologacion'
+import BotonNuevoCargo from '../FormNuevoCargo'
 
 export default async function AdminHomologacion() {
   const sesion = await obtenerSesionAdmin()
   const supabase = await crearClienteServidor()
 
-  const [{ data: pendientes }, { data: cargos }, { count: resueltos }] = await Promise.all([
+  const [{ data: pendientes }, { data: cargos }, { count: resueltos }, { data: bandas }] = await Promise.all([
     supabase.rpc('textos_cargo_pendientes'),
     supabase.from('cargos').select('id, nombre, banda').order('nombre'),
     supabase.from('cargo_homologacion').select('id', { count: 'exact', head: true }),
+    supabase.from('bandas').select('codigo, nombre').order('orden'),
   ])
 
   const lista = (pendientes ?? []) as TextoPendiente[]
@@ -31,6 +33,8 @@ export default async function AdminHomologacion() {
               todas sus actividades.
             </p>
           </div>
+          {/* Si el texto corresponde a un cargo que aún no está en el catálogo, se crea aquí */}
+          <BotonNuevoCargo bandas={bandas ?? []} />
         </div>
 
         <div className="grid-stats" style={{ marginBottom: 22 }}>

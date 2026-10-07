@@ -462,6 +462,20 @@ El editor marca cada paso sin homologar mostrando el texto anterior, para resolv
   - **Decisiones de Simón aplicadas (2026-07-23):** analista compensación→Asistente+Auxiliar · analista selección→Reclutador+Psicólogos · analista seg. social→Asistente Seg. Social · coordinador selección→Líder selección · coordinador servicio→Líder Nac Servicio+Líder Operativo · **Gerente de SST→no existe, eliminar** · gerentes/directores→Gerencia General/Administrativa, Gerente de Operaciones (Silvia), Director Operativo y Comercial (Alfonso) · Gestión de X→no-cargo. **214 enlaces**
   - **Quedan 9 pendientes** genuinamente inciertos (Analista de SST, Coordinador de vinculación, Líder de comunicación y mercadeo, Médico ocupacional, Recepcionista, Prospecto, Trabajador, Representante de trabajadores) → se resuelven en el panel
 
+### Seguimiento con John — 2026-10-07 | Claude-Simon
+
+Fuente: Granola «Seguimiento cerebro». Probado contra `HOMOLOGACION_COMPLETA_GESTION_SELECCION 2.xlsx` (2 hojas, 18 y 25 pasos).
+
+- [x] **El procedimiento se ancla a cada cargo.** El formato de John trae la descripción partida por cargo («Psicólogo de Selección: Responsable de… ¿Qué hace? ¿Cómo lo hace? ¿Dónde? ¿Cuándo?»). El importador separa cada bloque y lo asigna al cargo con su propio texto en `paso_cargos.descripcion`; la actividad ya no lleva una descripción general que repita lo mismo. Bloques con varios cargos («Recepcionista / Auxiliar de Servicio / Practicante») le dan el texto a cada uno; «(Apoyo)» lo vuelve cargo de apoyo; notas como «(Función propuesta por validar)» se conservan en el texto
+- [x] **Resolución de cargos al importar:** lista de los nombres del archivo con su equivalente del catálogo. Se reconocen solos los que coinciden sin importar tilde, género ni número (reclutadora = reclutador, psicóloga = psicólogos) o que ya estaban homologados. Lo demás se elige a mano, se marca «no es un cargo» (queda como texto de la actividad, p. ej. el cliente) o TH lo crea ahí mismo. No deja importar con nombres sin resolver. Lo que TH resuelve a mano queda guardado en `cargo_homologacion` para el próximo archivo
+- [x] **Salidas y periodicidad no se importaban:** los títulos «Salidas – Entregables» (guion largo) y «Periodicidad o Frecuencia» no coincidían. Los títulos ahora se comparan sin signos y aceptan nombres compuestos. La periodicidad del Excel («Por requerimiento») se conserva en el editor aunque no esté en la lista
+- [x] Archivos con **varias hojas**: se elige la hoja (cada una suele ser un procedimiento). El prefijo «Paso N.» del nombre de la actividad se quita, la numeración la pone el sistema
+- [x] **Crear cargos que faltan:** botón «Nuevo cargo» (nombre + banda, solo TH) en Organigrama y Homologar cargos, y dentro del importador. Evita duplicados con otra tilde o género
+- [x] **Ficha y PDF:** cada actividad muestra «Qué hace cada cargo» con ¿Qué hace?, ¿Cómo?, ¿Dónde? y ¿Cuándo? destacados
+- [x] **Guardar / publicar siempre visibles:** barra fija abajo en el editor
+- [ ] Flujograma con decisiones sí/no (estilo n8n) — versión futura
+- [ ] Peso distinto de funciones directas y de apoyo en desempeño — va con la plataforma de desempeño
+
 ### Ideas nuevas de la reunión (ver artefacto del layout)
 - [ ] **Manual de cargo automático** — abrir un cargo trae todas sus actividades. Ya viable gracias a `paso_cargos`. = Etapa 18 | Asignado: ``
 - [ ] Tareas con periodicidad y fecha → compromiso automático en Comités + recordatorios (“en el tintero”) | Asignado: ``

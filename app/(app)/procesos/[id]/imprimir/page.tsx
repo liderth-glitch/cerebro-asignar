@@ -6,6 +6,7 @@ import { obtenerSesion } from '@/lib/sesion'
 import Icono from '@/components/app/Icono'
 import BotonImprimir from './BotonImprimir'
 import Flujograma from '@/components/app/Flujograma'
+import TextoCargo from '@/components/app/TextoCargo'
 
 /** Fechas tipo DATE ('YYYY-MM-DD') → 'DD/MM/YYYY' sin pasar por Date (evita el corrimiento de zona horaria). */
 function fFecha(d?: string | null) {
@@ -247,11 +248,11 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
                                     {c.tipo === 'apoyo' && (
                                       <span className="doc-dato"> · apoyo{g ? ` de ${g.nombre}` : ''}</span>
                                     )}
-                                    {c.descripcion ? <>: {c.descripcion}</> : null}
+                                    {c.descripcion ? <TextoCargo texto={c.descripcion} compacto /> : null}
                                   </div>
                                 )
                               })}
-                              {p.descripcion && <div>{p.descripcion}</div>}
+                              {p.descripcion && <TextoCargo texto={p.descripcion} compacto />}
                             </>
                           ) : (
                             <>

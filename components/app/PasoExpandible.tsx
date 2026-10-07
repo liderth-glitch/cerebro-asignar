@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Icono from '@/components/app/Icono'
+import TextoCargo from '@/components/app/TextoCargo'
 
 export type PasoCargoVista = {
   tipo: string
@@ -45,7 +46,11 @@ function FilaInfo({ label, valor }: { label: string; valor: string | null }) {
 
 export default function PasoExpandible({ paso, index, total }: { paso: PasoDetalle; index: number; total: number }) {
   const [abierto, setAbierto] = useState(false)
+  const cargosConTexto = [...(paso.paso_cargos ?? [])]
+    .sort((a, b) => a.orden - b.orden)
+    .filter(c => c.descripcion?.trim() && uno(c.cargo)?.nombre)
   const tieneDetalle = paso.entradas || paso.periodicidad || paso.salidas || paso.acuerdo_servicio || paso.tiempos
+    || cargosConTexto.length > 0 || (paso.nombre && paso.descripcion)
 
   return (
     <li style={{
@@ -152,10 +157,37 @@ export default function PasoExpandible({ paso, index, total }: { paso: PasoDetal
           gridTemplateColumns: '1fr 1fr',
           gap: '14px 24px',
         }}>
-          {/* Descripción ocupa columna completa */}
+          {/* Qué hace cada cargo: el procedimiento se ancla al cargo, no a una descripción general */}
+          {cargosConTexto.length > 0 && (
+            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)' }}>
+                Qué hace cada cargo
+              </span>
+              {cargosConTexto.map((c, i) => {
+                const gestion = uno(c.gestion_apoyo)
+                return (
+                  <div key={i} style={{ fontSize: 13.5, lineHeight: 1.5, paddingLeft: 12, borderLeft: '2px solid var(--primary-soft)' }}>
+                    <div style={{ fontWeight: 700, marginBottom: 2 }}>
+                      {uno(c.cargo)?.nombre}
+                      {c.tipo === 'apoyo' && (
+                        <span style={{ fontWeight: 500, color: 'var(--text-3)' }}> · apoyo{gestion ? ` de ${gestion.nombre}` : ''}</span>
+                      )}
+                    </div>
+                    <TextoCargo texto={c.descripcion ?? ''} />
+                  </div>
+                )
+              })}
+            </div>
+          )}
+          {/* Lo que no es de un cargo del catálogo (p. ej. el cliente) o la descripción de antes */}
           {paso.nombre && paso.descripcion && (
-            <div style={{ gridColumn: '1 / -1' }}>
-              <FilaInfo label="Procedimiento" valor={paso.descripcion} />
+            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 3 }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)' }}>
+                {cargosConTexto.length > 0 ? 'Descripción' : 'Procedimiento'}
+              </span>
+              <span style={{ fontSize: 13.5, color: 'var(--text)', lineHeight: 1.5 }}>
+                <TextoCargo texto={paso.descripcion} />
+              </span>
             </div>
           )}
           <FilaInfo label="Entradas" valor={paso.entradas} />
