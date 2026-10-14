@@ -28,6 +28,7 @@ interface PasoDoc {
   acuerdo_servicio: string | null
   tiempos: string | null
   proceso_cliente: string | null
+  documentos_ids: string[] | null
   paso_cargos: {
     tipo: string; descripcion: string | null; orden: number
     cargo: { nombre: string } | { nombre: string }[] | null
@@ -50,7 +51,7 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
     .select(`
       *,
       gestion:gestiones(id, nombre),
-      pasos(id, numero_orden, nombre, descripcion, cargo_responsable, entradas, periodicidad, salidas, acuerdo_servicio, tiempos, proceso_cliente, paso_cargos(tipo, descripcion, orden, cargo:cargos(nombre), gestion_apoyo:gestiones(nombre))),
+      pasos(id, numero_orden, nombre, descripcion, cargo_responsable, entradas, periodicidad, salidas, acuerdo_servicio, tiempos, proceso_cliente, documentos_ids, paso_cargos(tipo, descripcion, orden, cargo:cargos(nombre), gestion_apoyo:gestiones(nombre))),
       documentos(id, nombre, tipo_archivo),
       tipo_documento:tipos_documento(nombre, prefijo)
     `)
@@ -236,7 +237,16 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
                       <tr key={p.id}>
                         <td className="doc-tabla__num">{i + 1}</td>
                         <td>{p.entradas || '—'}</td>
-                        <td>{p.nombre || '—'}</td>
+                        <td>
+                          {p.nombre || '—'}
+                          {/* Formatos de esta actividad: el mismo nombre que en «Documentos relacionados» */}
+                          {(() => {
+                            const docs = documentos.filter(d => (p.documentos_ids ?? []).includes(d.id))
+                            return docs.length > 0 ? (
+                              <div className="doc-dato" style={{ marginTop: 3 }}>Documentos: {docs.map(d => d.nombre).join('; ')}</div>
+                            ) : null
+                          })()}
+                        </td>
                         <td>
                           {/* Un bloque por cargo: "Cargo: qué hace, cómo, dónde y cuándo" */}
                           {cargos.length > 0 ? (

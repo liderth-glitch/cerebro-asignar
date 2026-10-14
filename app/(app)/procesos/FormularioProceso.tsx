@@ -29,8 +29,12 @@ interface Paso {
   acuerdo_servicio: string
   tiempos: string
   proceso_cliente: string
+  /** Claves de «Documentos relacionados» que se abren desde esta actividad (ver `claveDoc`) */
+  documentos: string[]
 }
-interface Documento { id?: string; nombre: string; tipo_archivo: string; url_descarga: string; tamano_bytes: number | null; archivo?: File }
+/** `claveLocal` identifica un archivo nuevo antes de subirlo, para poder vincularlo a un paso */
+interface Documento { id?: string; claveLocal?: string; nombre: string; tipo_archivo: string; url_descarga: string; tamano_bytes: number | null; archivo?: File }
+const claveDoc = (d: Documento) => d.id ?? d.claveLocal ?? d.nombre
 
 /** Sedes de Asignar. Un documento sin ciudad aplica a nivel nacional. */
 const SEDES = ['Bogotá', 'Medellín', 'Cali', 'Barranquilla', 'Cartagena', 'Rionegro', 'Pereira', 'Santa Marta']
@@ -43,6 +47,7 @@ interface Contacto { nombre: string; telefono: string; correo: string }
 const pasoVacio = (orden: number): Paso => ({
   numero_orden: orden, nombre: '', descripcion: '', cargo_responsable: '', cargos: [],
   entradas: '', periodicidad: '', salidas: '', acuerdo_servicio: '', tiempos: '', proceso_cliente: '',
+  documentos: [],
 })
 const contactoVacio = (): Contacto => ({ nombre: '', telefono: '', correo: '' })
 
@@ -205,7 +210,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
    */
   function importarPasos(nuevos: PasoImportado[], reemplazar: boolean) {
     const base = reemplazar ? [] : pasos
-    const combinados = [...base, ...nuevos]
+    const combinados = [...base, ...nuevos.map(p => ({ ...p, documentos: [] }))]
     setPasos(combinados.map((p, i) => ({ ...p, numero_orden: i + 1 })))
     setError('')
   }
@@ -231,6 +236,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
         url_descarga: '',
         tamano_bytes: f.size,
         archivo: f,
+        claveLocal: crypto.randomUUID(),
       })
     }
 
@@ -240,7 +246,17 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
   }
 
   function eliminarDocumento(i: number) {
+    const clave = claveDoc(documentos[i])
     setDocumentos(documentos.filter((_, j) => j !== i))
+    // Tampoco queda vinculado a ninguna actividad
+    setPasos(pasos.map(p => ({ ...p, documentos: p.documentos.filter(c => c !== clave) })))
+  }
+
+  function vincularDocumento(i: number, clave: string, vincular: boolean) {
+    setPasos(pasos.map((p, j) => j !== i ? p : {
+      ...p,
+      documentos: vincular ? [...new Set([...p.documentos, clave])] : p.documentos.filter(c => c !== clave),
+    }))
   }
 
   async function guardar(estadoFinal: EstadoProceso) {
@@ -305,9 +321,34 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
           p_resumen: resumenCambio,
         })
         if (errHist) throw errHist
-        // Eliminar pasos y documentos existentes para recriarlos
-        await supabase.from('pasos').delete().eq('proceso_id', procesoId)
       }
+
+      // Subir documentos nuevos ANTES de rehacer los pasos: así cada paso puede
+      // quedar vinculado al id real del archivo, y si una subida falla los pasos
+      // anteriores siguen intactos. Se delega en la server action, que sanitiza
+      // el nombre del archivo (Storage rechaza tildes y símbolos), valida tamaño
+      // y tipo, y guarda el storage_path que necesita la descarga por URL firmada.
+      const idPorClave = new Map<string, string>()
+      for (const doc of documentos) {
+        if (doc.id) { idPorClave.set(doc.id, doc.id); continue }
+        if (!doc.archivo) continue
+        const fd = new FormData()
+        fd.set('proceso_id', procesoId)
+        fd.set('archivo', doc.archivo)
+        fd.set('nombre', doc.nombre)
+        const res = await subirDocumentoProceso(fd)
+        if (res?.error || !res?.id) throw new Error(`No se pudo subir “${doc.nombre}”: ${res?.error ?? 'sin respuesta'}`)
+        idPorClave.set(claveDoc(doc), res.id)
+        // Si algo falla más adelante y se reintenta, este archivo no se vuelve a subir
+        const subido = res.id
+        setDocumentos(prev => prev.map(d => d === doc ? { ...d, id: subido, archivo: undefined } : d))
+        if (doc.claveLocal) setPasos(prev => prev.map(p => ({
+          ...p, documentos: p.documentos.map(c => c === doc.claveLocal ? subido : c),
+        })))
+      }
+
+      // Rehacer los pasos con sus cargos
+      if (!esNuevo) await supabase.from('pasos').delete().eq('proceso_id', procesoId)
 
       // Insertar pasos (los procesos de cliente no llevan pasos)
       if (!modoCliente && pasos.length > 0) {
@@ -323,6 +364,7 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
           acuerdo_servicio: p.acuerdo_servicio,
           tiempos: p.tiempos,
           proceso_cliente: p.proceso_cliente,
+          documentos_ids: p.documentos.map(c => idPorClave.get(c)).filter((x): x is string => !!x),
         }))
         // Se piden los ids de vuelta para poder colgar los cargos de cada paso
         const { data: pasosCreados, error: errPasos } = await supabase
@@ -345,19 +387,6 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
           const { error: errCargos } = await supabase.from('paso_cargos').insert(filasCargos)
           if (errCargos) throw errCargos
         }
-      }
-
-      // Subir documentos nuevos. Se delega en la server action, que sanitiza el
-      // nombre del archivo (Storage rechaza tildes y símbolos), valida tamaño y
-      // tipo, y guarda el storage_path que necesita la descarga por URL firmada.
-      for (const doc of documentos) {
-        if (!doc.archivo) continue
-        const fd = new FormData()
-        fd.set('proceso_id', procesoId)
-        fd.set('archivo', doc.archivo)
-        fd.set('nombre', doc.nombre)
-        const res = await subirDocumentoProceso(fd)
-        if (res?.error) throw new Error(`No se pudo subir “${doc.nombre}”: ${res.error}`)
       }
 
       router.push(`/procesos/${procesoId}`)
@@ -774,6 +803,37 @@ export default function FormularioProceso({ gestiones, gestionIdInicial, rol, ti
                     <label className="field__label">Cargo o proceso cliente</label>
                     <input className="ca-input ca-input--sm" placeholder="Quién recibe la salida"
                       value={paso.proceso_cliente} onChange={e => actualizarPaso(i, 'proceso_cliente', e.target.value)} />
+                  </div>
+                  {/* Documentos que se abren desde esta actividad; siguen también en «Documentos relacionados» */}
+                  <div className="field paso-grid--full">
+                    <label className="field__label">Documentos de esta actividad</label>
+                    {documentos.length === 0 ? (
+                      <span className="field__hint">
+                        Sube los formatos en «Documentos relacionados», al final, y aquí podrás vincularlos a esta actividad.
+                      </span>
+                    ) : (
+                      <div className="hstack" style={{ gap: 6, flexWrap: 'wrap' }}>
+                        {documentos.filter(d => paso.documentos.includes(claveDoc(d))).map(d => (
+                          <span key={claveDoc(d)} className="badge badge--neutral badge--no-dot" style={{ fontSize: 12, gap: 4 }}>
+                            <Icono nombre="file" className="icon icon--sm" /> {d.nombre}
+                            <button type="button" aria-label={`Quitar ${d.nombre} de esta actividad`}
+                              onClick={() => vincularDocumento(i, claveDoc(d), false)}
+                              style={{ background: 'none', border: 0, padding: 0, cursor: 'pointer', color: 'inherit', display: 'inline-flex' }}>
+                              <Icono nombre="x" className="icon icon--sm" />
+                            </button>
+                          </span>
+                        ))}
+                        {documentos.some(d => !paso.documentos.includes(claveDoc(d))) && (
+                          <select className="ca-select ca-select--sm" style={{ maxWidth: 280 }} value=""
+                            onChange={e => { if (e.target.value) vincularDocumento(i, e.target.value, true) }}>
+                            <option value="">+ Vincular documento…</option>
+                            {documentos.filter(d => !paso.documentos.includes(claveDoc(d))).map(d => (
+                              <option key={claveDoc(d)} value={claveDoc(d)}>{d.nombre}</option>
+                            ))}
+                          </select>
+                        )}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

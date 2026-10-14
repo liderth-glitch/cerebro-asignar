@@ -10,6 +10,8 @@ export interface CargoFila {
   banda: string
   actividades: number
   apoyos: number
+  /** Actividades en procedimientos sin publicar: aún no son funciones oficiales */
+  sinConfirmar: number
   gestiones: number
   personas: number
 }
@@ -64,6 +66,7 @@ export default function TablaCargos({ filas }: { filas: CargoFila[] }) {
                 <th style={{ width: 100, textAlign: 'center' }}>Personas</th>
                 <th style={{ width: 110, textAlign: 'center' }}>Actividades</th>
                 <th style={{ width: 90, textAlign: 'center' }}>Apoyos</th>
+                <th style={{ width: 110, textAlign: 'center' }} title="Actividades en procedimientos que aún no están publicados">Sin confirmar</th>
                 <th style={{ width: 90, textAlign: 'center' }}>Gestiones</th>
                 <th style={{ width: 60 }} />
               </tr>
@@ -84,6 +87,9 @@ export default function TablaCargos({ filas }: { filas: CargoFila[] }) {
                     <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-2)' }}>
                       {f.apoyos || <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
+                    <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--warning-ink)' }}>
+                      {f.sinConfirmar || <span style={{ color: 'var(--text-muted)' }}>—</span>}
+                    </td>
                     <td style={{ textAlign: 'center', fontFamily: 'var(--font-mono)', fontSize: 13, color: 'var(--text-2)' }}>
                       {f.gestiones || <span style={{ color: 'var(--text-muted)' }}>—</span>}
                     </td>
@@ -96,7 +102,7 @@ export default function TablaCargos({ filas }: { filas: CargoFila[] }) {
                 )
               })}
               {vis.length === 0 && (
-                <tr><td colSpan={7} style={{ textAlign: 'center', padding: 30, color: 'var(--text-3)', fontSize: 13 }}>
+                <tr><td colSpan={8} style={{ textAlign: 'center', padding: 30, color: 'var(--text-3)', fontSize: 13 }}>
                   Ningún cargo coincide con los filtros.
                 </td></tr>
               )}

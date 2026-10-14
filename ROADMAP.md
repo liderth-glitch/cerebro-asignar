@@ -476,6 +476,19 @@ Fuente: Granola «Seguimiento cerebro». Probado contra `HOMOLOGACION_COMPLETA_G
 - [ ] Flujograma con decisiones sí/no (estilo n8n) — versión futura
 - [ ] Peso distinto de funciones directas y de apoyo en desempeño — va con la plataforma de desempeño
 
+### Comité de Control Integrado — 2026-10-14 | Claude-Simon
+
+Fuente: Granola «COMITE CONTROL INTEGRADO» (sesión de trabajo Simón–John).
+
+- [x] **Documentos vinculados a una actividad.** Cada paso puede vincular documentos de «Documentos relacionados» (`pasos.documentos_ids`). En la ficha se abren desde la actividad y la fila cerrada avisa cuántos tiene; en el PDF salen bajo el nombre de la actividad. Siguen listados también en la biblioteca general. Los archivos nuevos se suben antes de rehacer los pasos, así quedan vinculados con su id real y una subida fallida no deja el procedimiento sin pasos
+- [x] **Manual de cargo con funciones «no confirmadas».** Las actividades de procedimientos sin publicar (borrador, en revisión, desactualizado) ya no desaparecen: salen aparte, con el estado del procedimiento, y pasan a oficiales al publicar
+- [x] **Corregida la inconsistencia de conteo:** la lista de cargos contaba las funciones de borradores, pero el manual solo mostraba las publicadas. Ahora la lista cuenta solo las publicadas y muestra aparte la columna «Sin confirmar»
+- [~] **Vencido → desactualizado automático.** Función `marcar_procesos_vencidos()` creada (cambia el estado y notifica al líder y al creador). **Falta programarla:** hoy los colaboradores solo ven procedimientos activos y 6 de los 8 publicados ya están vencidos (31-jul y 17-sep), así que al activarla dejarían de verse. Decisión de Simón pendiente
+- [x] Permiso de eliminar procedimientos para John William (`puede_eliminar_procesos`)
+- [x] Gestiones nuevas: **Cartera** y **Compliance** (gestión de apoyo transversal para la custodia y trazabilidad documental)
+- [ ] Procedimientos faltantes sin borrador: TI, Compliance e Inventarios (Inventarios: Simón, 2–3 semanas)
+- [ ] Selección: John termina el modelado por cargo, Karen revisa, elimina el borrador de prueba y publica. Karen debe activar su cuenta en `/activar`
+
 ### Ideas nuevas de la reunión (ver artefacto del layout)
 - [ ] **Manual de cargo automático** — abrir un cargo trae todas sus actividades. Ya viable gracias a `paso_cargos`. = Etapa 18 | Asignado: ``
 - [ ] Tareas con periodicidad y fecha → compromiso automático en Comités + recordatorios (“en el tintero”) | Asignado: ``
