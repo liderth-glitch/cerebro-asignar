@@ -34,8 +34,9 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
 
   if (!proceso) notFound()
 
-  // Control de acceso: colaboradores no pueden ver borradores de otras gestiones
-  const puedeVer = proceso.estado === 'activo'
+  // Control de acceso: colaboradores no pueden ver borradores de otras gestiones.
+  // Un desactualizado sí se consulta, con aviso (decisión del comité, 2026-10-14)
+  const puedeVer = proceso.estado === 'activo' || proceso.estado === 'desactualizado'
     || sesion.rol === 'admin'
     || (sesion.rol === 'lider' && sesion.gestion_id === proceso.gestion_id)
 
@@ -139,8 +140,28 @@ export default async function PaginaProceso({ params }: { params: Promise<{ id: 
           </div>
         </div>
 
+        {/* Desactualizado: se puede consultar, pero no es la versión vigente */}
+        {proceso.estado === 'desactualizado' && (
+          <div className="card" style={{ padding: 14, marginBottom: 20, background: 'var(--warning-soft)', border: '1px solid var(--warning)' }}>
+            <div className="hstack" style={{ gap: 8, alignItems: 'flex-start', color: 'var(--warning-ink)' }}>
+              <Icono nombre="info" className="icon icon--sm" style={{ flexShrink: 0, marginTop: 2 }} />
+              <span style={{ fontSize: 13.5 }}>
+                <strong>Documento desactualizado.</strong>{' '}
+                {proceso.fecha_proxima_revision && calcularVigencia(proceso.fecha_proxima_revision).vigencia === 'vencido'
+                  ? `${textoVigencia(calcularVigencia(proceso.fecha_proxima_revision))}. `
+                  : ''}
+                Puedes consultarlo, pero quizá ya no refleje cómo se trabaja hoy. Sus funciones no
+                cuentan en los manuales de cargo hasta que se actualice y se vuelva a publicar.
+                {puedeEditar
+                  ? ' Actualízalo y envíalo a aprobación.'
+                  : ' Ante cualquier duda, consúltalo con el líder de la gestión.'}
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Aviso de vigencia — el documento necesita revisión */}
-        {(() => {
+        {proceso.estado !== 'desactualizado' && (() => {
           const vig = calcularVigencia(proceso.fecha_proxima_revision)
           if (vig.vigencia !== 'vencido' && vig.vigencia !== 'por_vencer') return null
           const esVencido = vig.vigencia === 'vencido'

@@ -60,7 +60,7 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
 
   if (!proceso) notFound()
 
-  const puedeVer = proceso.estado === 'activo'
+  const puedeVer = proceso.estado === 'activo' || proceso.estado === 'desactualizado'
     || sesion.rol === 'admin'
     || (sesion.rol === 'lider' && sesion.gestion_id === proceso.gestion_id)
   if (!puedeVer) notFound()
@@ -123,6 +123,12 @@ export default async function PaginaImprimirProceso({ params }: { params: Promis
 
       {/* ===== Documento oficial ===== */}
       <div className="doc-print">
+        {/* Un desactualizado se puede imprimir, pero no debe pasar por vigente */}
+        {proceso.estado === 'desactualizado' && (
+          <div style={{ border: '2px solid #b45309', color: '#92400e', padding: '6px 10px', marginBottom: 10, fontWeight: 700, textAlign: 'center', fontSize: 12 }}>
+            DOCUMENTO DESACTUALIZADO — no es la versión vigente
+          </div>
+        )}
         {/* Encabezado normalizado */}
         <table className="doc-head">
           <tbody>

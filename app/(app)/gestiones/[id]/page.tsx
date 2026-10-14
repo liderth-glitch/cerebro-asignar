@@ -27,8 +27,9 @@ export default async function PaginaGestion({ params }: { params: Promise<{ id: 
     .eq('gestion_id', id)
     .order('nombre')
 
+  // Los desactualizados se siguen consultando, con su aviso; los borradores no
   if (!puedeEditar) {
-    query = query.eq('estado', 'activo')
+    query = query.in('estado', ['activo', 'desactualizado'])
   }
 
   const { data: procesos } = await query

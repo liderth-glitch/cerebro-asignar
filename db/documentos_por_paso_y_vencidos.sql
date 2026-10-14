@@ -42,9 +42,14 @@ end $$;
 
 revoke all on function public.marcar_procesos_vencidos() from public, anon, authenticated;
 
--- 3. PENDIENTE DE DECISIÓN — programarla todos los días a la 1:00 a. m. de Bogotá:
+-- 3. Decisión de Simón (2026-10-14): los desactualizados se siguen viendo, con aviso.
+--    Antes de programar la tarea se renovó al 2027-01-15 la revisión de los 6
+--    publicados que ya estaban vencidos (Comercial, Selección, Vinculación,
+--    Servicio y Programación, Compensación, Seguridad Social).
+--    Aplicado con la migración `desactualizados_visibles_y_vencimiento_diario`:
+--    las policies procesos_lectura, pasos_lectura, documentos_lectura e
+--    historial_lectura aceptan estado in ('activo', 'desactualizado'), y:
+--
 --    create extension if not exists pg_cron;
 --    select cron.schedule('marcar-procesos-vencidos', '0 6 * * *', $$select public.marcar_procesos_vencidos()$$);
---    Ojo: hoy los colaboradores solo ven procedimientos en estado «activo»
---    (policy procesos_lectura), así que un procedimiento desactualizado deja de
---    verse para ellos.
+--    (todos los días a la 1:00 a. m. de Bogotá)
