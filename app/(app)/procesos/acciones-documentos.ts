@@ -43,21 +43,22 @@ export async function subirDocumentoProceso(formData: FormData) {
   })
   if (upErr) return { error: `Storage: ${upErr.message}` }
 
-  const { error: insErr } = await supabase.from('documentos').insert({
+  // Se devuelve el id para poder vincular el documento a pasos del procedimiento
+  const { data: creado, error: insErr } = await supabase.from('documentos').insert({
     proceso_id: procesoId,
     nombre: nombrePersonalizado || archivo.name,
     tipo_archivo: ext.toUpperCase(),
     tamano_bytes: archivo.size,
     storage_path: path,
     subido_por: user.id,
-  })
-  if (insErr) {
+  }).select('id').single()
+  if (insErr || !creado) {
     await supabase.storage.from(BUCKET).remove([path])
-    return { error: insErr.message }
+    return { error: insErr?.message ?? 'No se pudo registrar el documento' }
   }
 
   revalidatePath(`/procesos/${procesoId}`)
-  return { ok: true }
+  return { ok: true, id: creado.id as string }
 }
 
 export async function eliminarDocumentoProceso(docId: string, procesoId: string) {

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import Icono from '@/components/app/Icono'
 import TextoCargo from '@/components/app/TextoCargo'
 import { restoSinRepetir } from '@/lib/procesos/importar-pasos'
+import { obtenerUrlDocumento } from '@/app/(app)/procesos/acciones-documentos'
 
 export type PasoCargoVista = {
   tipo: string
@@ -26,7 +27,11 @@ export type PasoDetalle = {
   acuerdo_servicio: string | null
   tiempos: string | null
   paso_cargos?: PasoCargoVista[] | null
+  documentos_ids?: string[] | null
 }
+
+/** Documento del proceso que se puede abrir desde una actividad */
+export type DocumentoPaso = { id: string; nombre: string; storage_path: string | null }
 
 /** Supabase devuelve las relaciones como arrays */
 function uno<T>(v: T | T[] | null): T | null {
@@ -71,13 +76,26 @@ function BloqueCargo({ nombre, apoyo, detalle, texto }: {
   )
 }
 
-export default function PasoExpandible({ paso, index, total }: { paso: PasoDetalle; index: number; total: number }) {
+export default function PasoExpandible({ paso, index, total, documentos = [] }: {
+  paso: PasoDetalle; index: number; total: number
+  /** Todos los documentos del proceso; se muestran los vinculados a esta actividad */
+  documentos?: DocumentoPaso[]
+}) {
   const [abierto, setAbierto] = useState(false)
+  const [errorDoc, setErrorDoc] = useState('')
+  const docsPaso = documentos.filter(d => (paso.documentos_ids ?? []).includes(d.id))
+
+  async function abrirDocumento(d: DocumentoPaso) {
+    setErrorDoc('')
+    const url = d.storage_path ? await obtenerUrlDocumento(d.storage_path) : null
+    if (!url) { setErrorDoc('No se pudo abrir el documento.'); return }
+    window.open(url, '_blank', 'noopener')
+  }
   const cargosConTexto = [...(paso.paso_cargos ?? [])]
     .sort((a, b) => a.orden - b.orden)
     .filter(c => c.descripcion?.trim() && uno(c.cargo)?.nombre)
   const tieneDetalle = paso.entradas || paso.periodicidad || paso.salidas || paso.acuerdo_servicio || paso.tiempos
-    || cargosConTexto.length > 0 || (paso.nombre && paso.descripcion)
+    || cargosConTexto.length > 0 || (paso.nombre && paso.descripcion) || docsPaso.length > 0
   // También parte por cargo el texto de los procedimientos de antes, que aún no tienen cargos con texto
   const otros = restoSinRepetir(paso.descripcion ?? '', cargosConTexto.map(c => c.descripcion ?? ''))
 
@@ -155,6 +173,12 @@ export default function PasoExpandible({ paso, index, total }: { paso: PasoDetal
                 <Icono nombre="history" className="icon icon--sm" /> {paso.periodicidad}
               </span>
             )}
+            {/* Aviso en la fila cerrada: esta actividad tiene formatos para abrir */}
+            {docsPaso.length > 0 && (
+              <span className="badge badge--neutral badge--no-dot" style={{ fontSize: 12, background: 'var(--surface-sunken)' }}>
+                <Icono nombre="file" className="icon icon--sm" /> {docsPaso.length} documento{docsPaso.length === 1 ? '' : 's'}
+              </span>
+            )}
           </div>
         </div>
 
@@ -210,6 +234,22 @@ export default function PasoExpandible({ paso, index, total }: { paso: PasoDetal
                   <TextoCargo texto={otros.resto} />
                 </div>
               )}
+            </div>
+          )}
+          {docsPaso.length > 0 && (
+            <div style={{ gridColumn: '1 / -1', display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <span style={{ fontSize: 11.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-3)' }}>
+                Documentos de esta actividad
+              </span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {docsPaso.map(d => (
+                  <button key={d.id} type="button" className="btn btn--secondary btn--sm"
+                    onClick={e => { e.stopPropagation(); abrirDocumento(d) }}>
+                    <Icono nombre="file" className="icon icon--sm" /> {d.nombre}
+                  </button>
+                ))}
+              </div>
+              {errorDoc && <span style={{ fontSize: 12, color: 'var(--danger-ink)' }}>{errorDoc}</span>}
             </div>
           )}
           <FilaInfo label="Entradas" valor={paso.entradas} />

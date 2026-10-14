@@ -13,25 +13,32 @@ export default async function PaginaCargos() {
     supabase.from('cargos').select('id, nombre, banda').order('nombre'),
     // Actividades donde cada cargo participa, con la gestión del proceso
     supabase.from('paso_cargos')
-      .select('cargo_id, tipo, paso:pasos(proceso:procesos(gestion_id))'),
+      .select('cargo_id, tipo, paso:pasos(proceso:procesos(gestion_id, estado))'),
     supabase.from('usuarios').select('cargo_id').eq('activo', true),
     supabase.rpc('cargos_sin_responsable'),
   ])
   const sinResponsable = (huerfanos ?? []).length
   const puedeVerCargas = sesion.rol !== 'colaborador'
 
-  // Un cargo puede repetirse en varias actividades del mismo proceso: se cuenta por paso
-  const porCargo = new Map<string, { actividades: number; apoyos: number; gestiones: Set<string> }>()
+  // Un cargo puede repetirse en varias actividades del mismo proceso: se cuenta por paso.
+  // Igual que el manual: solo cuentan como funciones las de procedimientos publicados;
+  // las demás van aparte como «sin confirmar». Antes se contaba todo y el manual
+  // mostraba menos funciones de las que decía la lista.
+  const porCargo = new Map<string, { actividades: number; apoyos: number; sinConfirmar: number; gestiones: Set<string> }>()
   for (const e of enlaces ?? []) {
-    const reg = porCargo.get(e.cargo_id) ?? { actividades: 0, apoyos: 0, gestiones: new Set<string>() }
-    if (e.tipo === 'apoyo') reg.apoyos += 1
-    else reg.actividades += 1
-    const pRaw = e.paso as unknown as { proceso: { gestion_id: string } | { gestion_id: string }[] | null } | { proceso: unknown }[] | null
+    const pRaw = e.paso as unknown as { proceso: unknown } | { proceso: unknown }[] | null
     const paso = Array.isArray(pRaw) ? pRaw[0] : pRaw
-    const procRaw = (paso as { proceso?: unknown } | null)?.proceso
-    const proc = Array.isArray(procRaw) ? procRaw[0] : procRaw
-    const gid = (proc as { gestion_id?: string } | null)?.gestion_id
-    if (gid) reg.gestiones.add(gid)
+    const procRaw = paso?.proceso
+    const proc = (Array.isArray(procRaw) ? procRaw[0] : procRaw) as { gestion_id?: string; estado?: string } | null
+    // Procedimiento que esta persona no puede ver: no se cuenta
+    if (!proc) continue
+    const reg = porCargo.get(e.cargo_id) ?? { actividades: 0, apoyos: 0, sinConfirmar: 0, gestiones: new Set<string>() }
+    if (proc.estado !== 'activo') reg.sinConfirmar += 1
+    else {
+      if (e.tipo === 'apoyo') reg.apoyos += 1
+      else reg.actividades += 1
+      if (proc.gestion_id) reg.gestiones.add(proc.gestion_id)
+    }
     porCargo.set(e.cargo_id, reg)
   }
 
@@ -48,6 +55,7 @@ export default async function PaginaCargos() {
       banda: c.banda,
       actividades: reg?.actividades ?? 0,
       apoyos: reg?.apoyos ?? 0,
+      sinConfirmar: reg?.sinConfirmar ?? 0,
       gestiones: reg?.gestiones.size ?? 0,
       personas: conteoPersonas.get(c.id) ?? 0,
     }

@@ -19,7 +19,8 @@ export default async function PaginaBusqueda({ searchParams }: { searchParams: P
     `)
     .order('nombre')
 
-  if (!puedeVerBorradores) query = query.eq('estado', 'activo')
+  // Los desactualizados se siguen encontrando, con su aviso; los borradores no
+  if (!puedeVerBorradores) query = query.in('estado', ['activo', 'desactualizado'])
 
   const { data: procesosRaw } = await query
   const procesos = (procesosRaw ?? []).map(p => ({
