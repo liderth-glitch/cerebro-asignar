@@ -26,7 +26,10 @@ export async function actualizarSesion(request: NextRequest) {
     }
   )
 
-  const { data: { user } } = await supabase.auth.getUser()
+  // `getClaims` refresca el token si venció y verifica su firma localmente
+  // (llaves ES256): no llama al servidor de autenticación en cada navegación
+  const { data } = await supabase.auth.getClaims()
+  const user = data?.claims ?? null
 
   const esRutaPublica = request.nextUrl.pathname.startsWith('/login')
     || request.nextUrl.pathname.startsWith('/activar')

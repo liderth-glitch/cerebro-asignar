@@ -10,14 +10,6 @@ export default async function PaginaGestion({ params }: { params: Promise<{ id: 
   const sesion = await obtenerSesion()
   const supabase = await crearClienteServidor()
 
-  const { data: gestion } = await supabase
-    .from('gestiones')
-    .select('*, lider:usuarios!gestiones_lider_id_fkey(id, nombre)')
-    .eq('id', id)
-    .single()
-
-  if (!gestion) notFound()
-
   const puedeEditar = sesion.rol === 'admin' || (sesion.rol === 'lider' && sesion.gestion_id === id)
 
   // Procesos: colaboradores solo ven activos, líderes/admin ven todo de esta gestión
@@ -32,7 +24,17 @@ export default async function PaginaGestion({ params }: { params: Promise<{ id: 
     query = query.in('estado', ['activo', 'desactualizado'])
   }
 
-  const { data: procesos } = await query
+  // La gestión y sus procesos se piden a la vez, no una después de la otra
+  const [{ data: gestion }, { data: procesos }] = await Promise.all([
+    supabase
+      .from('gestiones')
+      .select('*, lider:usuarios!gestiones_lider_id_fkey(id, nombre)')
+      .eq('id', id)
+      .single(),
+    query,
+  ])
+
+  if (!gestion) notFound()
 
   const liderRaw = gestion.lider as unknown as { id: string; nombre: string }[] | { id: string; nombre: string } | null
   const lider = Array.isArray(liderRaw) ? (liderRaw[0] ?? null) : liderRaw
