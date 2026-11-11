@@ -802,6 +802,11 @@ Revisando el deploy contra las pantallas del Figma («todo se ve opaco y muerto�
   - [x] `aria-label` en 9 botones/Links ícono-solo (Topbar logout, modal cerrar ciclo, ver reporte, editar usuario, ver gestión, abrir gestión, abrir proceso, ver ciclo). Se estimaron ~40 pero al buscar todo el codebase eran 9 | Claude-Marketing
   - [ ] Audit completo pendiente (focus visible, contraste, roles ARIA en modals)
 - [x] Optimización de performance (LCP, CLS) | Claude-MK
+- [x] **Navegación entre módulos más rápida (2026-11-11)** | Claude-Simon. La base respondía en milisegundos; el tiempo se iba en idas y vueltas antes de cada página: el middleware, el layout y la página consultaban cada uno al servidor de autenticación y el perfil se leía dos veces
+  - `getClaims` en vez de `getUser` en el middleware y en la sesión: el token se verifica en el servidor con las llaves ES256 del proyecto, sin llamar a Supabase Auth
+  - `obtenerSesion` envuelta en `cache` de React: layout y página comparten una sola lectura del perfil por petición
+  - `/gestiones/[id]` pide la gestión y sus procesos a la vez; el editor de usuario reutiliza la sesión del layout
+  - `vercel.json` fija las funciones en `iad1` (Washington), junto a la base en `us-east-1`
 - [x] Limpieza de código (build fix + higiene) | Claude-Marketing
   - [x] Fix build Vercel: mover `dynamic ssr:false` a Client Component (Next.js 16) (PR #1)
   - [x] Fix errores `react-hooks/purity` en `FormularioCiclo.tsx` y `ClienteAprobaciones.tsx` (PR #4)

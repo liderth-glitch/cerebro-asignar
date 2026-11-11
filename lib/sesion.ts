@@ -1,3 +1,4 @@
+import { cache } from 'react'
 import { redirect } from 'next/navigation'
 import { crearClienteServidor } from '@/lib/supabase/server'
 import type { SesionUsuario, Rol } from '@/types'
@@ -15,15 +16,31 @@ export function nombreSaludo(nombre: string, nombrePreferido: string | null): st
   return base.charAt(0).toUpperCase() + base.slice(1).toLowerCase()
 }
 
-export async function obtenerSesion(): Promise<SesionUsuario> {
+/**
+ * Id del usuario de la petición. `getClaims` verifica la firma del token en el
+ * propio servidor (llaves ES256 del proyecto) en vez de consultar al servidor
+ * de autenticación como `getUser`: una ida y vuelta menos en cada página.
+ * `cache` lo comparte entre el layout y la página de una misma petición.
+ */
+export const obtenerUsuarioId = cache(async (): Promise<string | null> => {
   const supabase = await crearClienteServidor()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const { data } = await supabase.auth.getClaims()
+  return (data?.claims?.sub as string | undefined) ?? null
+})
 
+/**
+ * Sesión con el perfil. Con `cache`, el layout y la página (y cualquier
+ * componente) que la pidan en la misma petición hacen una sola consulta.
+ */
+export const obtenerSesion = cache(async (): Promise<SesionUsuario> => {
+  const userId = await obtenerUsuarioId()
+  if (!userId) redirect('/login')
+
+  const supabase = await crearClienteServidor()
   const { data: perfil } = await supabase
     .from('usuarios')
     .select('id, nombre, nombre_preferido, correo, rol, gestion_id')
-    .eq('id', user.id)
+    .eq('id', userId)
     .single()
 
   if (!perfil) redirect('/login')
@@ -38,7 +55,7 @@ export async function obtenerSesion(): Promise<SesionUsuario> {
     gestion_id: perfil.gestion_id,
     iniciales: obtenerIniciales(perfil.nombre),
   }
-}
+})
 
 export async function obtenerSesionAdmin(): Promise<SesionUsuario> {
   const sesion = await obtenerSesion()
