@@ -38,6 +38,8 @@ interface Preview {
   inactivar: { codigo_contrato: string; nombre: string }[]
   cargosFaltantes: string[]
   errores: string[]
+  /** Correos del Excel que no se cargan porque ya son de otra persona o se repiten en el archivo */
+  correosOmitidos: string[]
 }
 
 // Mapeo CCF → Sede de trabajo (default)
@@ -143,7 +145,7 @@ export default function ClienteImportador({ cargos }: { cargos: Cargo[] }) {
           sede_inferida: inferirSede(codigo, ccf, overrides),
           cargo_id: cargo?.id ?? null,
           // Campos opcionales del nuevo Excel (si no están en el archivo, quedan null)
-          correo: txt(row['Email'] ?? row['Correo']) || null,
+          correo: txt(row['Email'] ?? row['Correo']).toLowerCase() || null,
           celular: txt(row['Celular']) || null,
           direccion: txt(row['Dirección'] ?? row['Direccion']) || null,
           tipo_contrato: txt(row['Tipo contrato'] ?? row['Tipo de contrato']) || null,
@@ -151,13 +153,36 @@ export default function ClienteImportador({ cargos }: { cargos: Cargo[] }) {
       }
 
       const codigos = filasParseadas.map(f => f.codigo_contrato)
-      const { data: existentes, error: errExist } = await supabase
-        .from('usuarios')
-        .select('codigo_contrato, nombre, documento, cargo_id, sede, salario, valor_hora, activo, fecha_retiro')
-        .not('codigo_contrato', 'is', null)
+      const [{ data: existentes, error: errExist }, { data: conCorreo, error: errCorreo }] = await Promise.all([
+        supabase
+          .from('usuarios')
+          .select('codigo_contrato, nombre, documento, cargo_id, sede, salario, valor_hora, activo, fecha_retiro, correo')
+          .not('codigo_contrato', 'is', null),
+        // Todos los correos ya usados, también los de personas sin código de contrato
+        supabase.from('usuarios').select('codigo_contrato, nombre, correo').not('correo', 'is', null),
+      ])
       if (errExist) throw errExist
+      if (errCorreo) throw errCorreo
 
       const mapExistentes = new Map((existentes ?? []).map(e => [e.codigo_contrato, e]))
+
+      // El correo es único en la base y, para quien ya activó su cuenta, es su
+      // usuario de ingreso. Por eso solo se carga en personas que aún no tienen
+      // uno, y nunca si ya es de otra persona o se repite en el mismo archivo.
+      const duenoCorreo = new Map((conCorreo ?? []).map(u => [u.correo!.toLowerCase(), u]))
+      const correosOmitidos: string[] = []
+      for (const f of filasParseadas) {
+        if (!f.correo) continue
+        const ex = mapExistentes.get(f.codigo_contrato)
+        if (ex?.correo) { f.correo = null; continue }
+        const dueno = duenoCorreo.get(f.correo)
+        if (dueno && dueno.codigo_contrato !== f.codigo_contrato) {
+          correosOmitidos.push(`${f.nombre} (${f.codigo_contrato}): ${f.correo} ya es de ${dueno.nombre}`)
+          f.correo = null
+          continue
+        }
+        duenoCorreo.set(f.correo, { codigo_contrato: f.codigo_contrato, nombre: f.nombre, correo: f.correo })
+      }
 
       const nuevos: FilaExcel[] = []
       const actualizar: FilaExcel[] = []
@@ -177,7 +202,9 @@ export default function ClienteImportador({ cargos }: { cargos: Cargo[] }) {
           ex.salario !== f.salario ||
           ex.valor_hora !== f.valor_hora ||
           (!!ex.fecha_retiro) !== (!!f.fecha_retiro) ||
-          !ex.activo
+          !ex.activo ||
+          // Aquí el correo solo sigue presente si hay que cargarlo (la persona no tenía)
+          !!f.correo
         )
         if (cambio) actualizar.push(f)
       }
@@ -194,6 +221,7 @@ export default function ClienteImportador({ cargos }: { cargos: Cargo[] }) {
         inactivar,
         cargosFaltantes: Array.from(cargosFaltantesSet).sort(),
         errores,
+        correosOmitidos,
       })
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Error procesando el archivo')
@@ -211,39 +239,47 @@ export default function ClienteImportador({ cargos }: { cargos: Cargo[] }) {
       let actualizados = 0
       let inactivados = 0
 
-      const aUpsert = [...preview.nuevos, ...preview.actualizar]
-      if (aUpsert.length > 0) {
-        const filasParaBD = aUpsert.map(f => ({
-          codigo_contrato: f.codigo_contrato,
-          nombre: f.nombre,
-          rol: 'colaborador',
-          documento: f.documento,
-          tipo_documento: f.tipo_documento,
-          fecha_ingreso: f.fecha_ingreso,
-          fecha_nacimiento: f.fecha_nacimiento,
-          fecha_retiro: f.fecha_retiro,
-          salario: f.salario,
-          valor_hora: f.valor_hora,
-          cargo_id: f.cargo_id,
-          caja_compensacion: f.caja_compensacion,
-          departamento: f.departamento,
-          ciudad: f.ciudad,
-          sede: f.sede_inferida,
-          // Solo incluir campos opcionales si el Excel los trae (no sobreescribir con null si admin los seteo)
-          ...(f.correo ? { correo: f.correo } : {}),
-          ...(f.celular ? { celular: f.celular } : {}),
-          ...(f.direccion ? { direccion: f.direccion } : {}),
-          ...(f.tipo_contrato ? { tipo_contrato: f.tipo_contrato } : {}),
-          activo: !f.fecha_retiro,
-          tiene_login: false,
-        }))
-        const { error: errUpsert, data } = await supabase
+      // Datos que vienen del software de Asignar. El rol y el estado de la cuenta
+      // NO van aquí: son de Cerebro y una actualización no debe tocarlos (antes se
+      // reescribían en cada importación y degradaban a admins y líderes).
+      const datosExcel = (f: FilaExcel) => ({
+        codigo_contrato: f.codigo_contrato,
+        nombre: f.nombre,
+        documento: f.documento,
+        tipo_documento: f.tipo_documento,
+        fecha_ingreso: f.fecha_ingreso,
+        fecha_nacimiento: f.fecha_nacimiento,
+        fecha_retiro: f.fecha_retiro,
+        salario: f.salario,
+        valor_hora: f.valor_hora,
+        cargo_id: f.cargo_id,
+        caja_compensacion: f.caja_compensacion,
+        departamento: f.departamento,
+        ciudad: f.ciudad,
+        sede: f.sede_inferida,
+        // Solo incluir campos opcionales si el Excel los trae (no sobreescribir con null si admin los seteo)
+        ...(f.correo ? { correo: f.correo } : {}),
+        ...(f.celular ? { celular: f.celular } : {}),
+        ...(f.direccion ? { direccion: f.direccion } : {}),
+        ...(f.tipo_contrato ? { tipo_contrato: f.tipo_contrato } : {}),
+        activo: !f.fecha_retiro,
+      })
+
+      if (preview.nuevos.length > 0) {
+        const { error: errIns } = await supabase
           .from('usuarios')
-          .upsert(filasParaBD, { onConflict: 'codigo_contrato' })
-          .select('codigo_contrato')
-        if (errUpsert) throw errUpsert
+          .insert(preview.nuevos.map(f => ({ ...datosExcel(f), rol: 'colaborador', tiene_login: false })))
+        if (errIns) throw errIns
         insertados = preview.nuevos.length
-        actualizados = (data?.length ?? 0) - insertados
+      }
+
+      if (preview.actualizar.length > 0) {
+        const { error: errUpd, data } = await supabase
+          .from('usuarios')
+          .upsert(preview.actualizar.map(datosExcel), { onConflict: 'codigo_contrato' })
+          .select('codigo_contrato')
+        if (errUpd) throw errUpd
+        actualizados = data?.length ?? 0
       }
 
       if (preview.inactivar.length > 0) {
@@ -374,6 +410,21 @@ export default function ClienteImportador({ cargos }: { cargos: Cargo[] }) {
                   <span key={c} className="badge badge--no-dot" style={{ background: 'var(--surface)', color: 'var(--warning-ink)', border: '1px solid var(--warning)' }}>{c}</span>
                 ))}
               </div>
+            </section>
+          )}
+
+          {preview.correosOmitidos.length > 0 && (
+            <section className="card" style={{ padding: 16, marginBottom: 16, background: 'var(--warning-soft)', borderColor: 'var(--warning)' }}>
+              <strong style={{ color: 'var(--warning-ink)' }}>
+                {preview.correosOmitidos.length} correo(s) no se cargan
+              </strong>
+              <p style={{ margin: '4px 0 8px', fontSize: 12.5, color: 'var(--warning-ink)' }}>
+                Ya pertenecen a otra persona en Cerebro o se repiten en el archivo. El resto de los datos de
+                esas personas sí se importa; el correo se corrige a mano en su ficha.
+              </p>
+              <ul style={{ margin: '0 0 0 20px', fontSize: 12.5, color: 'var(--warning-ink)' }}>
+                {preview.correosOmitidos.map((c, i) => <li key={i}>{c}</li>)}
+              </ul>
             </section>
           )}
 
