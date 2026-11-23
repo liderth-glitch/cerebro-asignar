@@ -273,13 +273,26 @@ export default function ClienteImportador({ cargos }: { cargos: Cargo[] }) {
         insertados = preview.nuevos.length
       }
 
+      // Una actualización por persona, con solo sus campos. En bloque (upsert),
+      // PostgREST usa las mismas columnas para todas las filas: si una trae
+      // correo o celular y otra no, a la segunda se le vaciaba ese campo.
       if (preview.actualizar.length > 0) {
-        const { error: errUpd, data } = await supabase
-          .from('usuarios')
-          .upsert(preview.actualizar.map(datosExcel), { onConflict: 'codigo_contrato' })
-          .select('codigo_contrato')
-        if (errUpd) throw errUpd
-        actualizados = data?.length ?? 0
+        const fallidas: string[] = []
+        const LOTE = 10
+        for (let k = 0; k < preview.actualizar.length; k += LOTE) {
+          const lote = preview.actualizar.slice(k, k + LOTE)
+          const res = await Promise.all(lote.map(f =>
+            supabase.from('usuarios').update(datosExcel(f)).eq('codigo_contrato', f.codigo_contrato)
+              .then(({ error }) => ({ f, error })),
+          ))
+          for (const { f, error } of res) {
+            if (error) fallidas.push(`${f.nombre} (${f.codigo_contrato}): ${error.message}`)
+            else actualizados += 1
+          }
+        }
+        if (fallidas.length > 0) {
+          throw new Error(`Se actualizaron ${actualizados}, pero fallaron ${fallidas.length}: ${fallidas.join(' · ')}`)
+        }
       }
 
       if (preview.inactivar.length > 0) {
