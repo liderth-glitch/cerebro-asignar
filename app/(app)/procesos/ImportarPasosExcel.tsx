@@ -1,6 +1,11 @@
 'use client'
 
 import { useMemo, useState } from 'react'
+// Se importa junto con la página, no al elegir el archivo: con carga diferida,
+// si se publicaba una versión nueva mientras la página estaba abierta, el
+// navegador pedía una pieza de la versión anterior que ya no existe
+// («Failed to load chunk»).
+import * as XLSX from 'xlsx'
 import Icono from '@/components/app/Icono'
 import { crearClienteNavegador } from '@/lib/supabase/client'
 import type { CargoCatalogo, PasoCargo } from './SelectorCargos'
@@ -145,7 +150,6 @@ export default function ImportarPasosExcel({
   async function leer(archivo: File) {
     setError(''); setAnalisis(null); setCargando(true)
     try {
-      const XLSX = await import('xlsx')
       const wb = XLSX.read(await archivo.arrayBuffer(), { type: 'array' })
       if (wb.SheetNames.length === 0) throw new ErrorImportacion('El archivo no tiene ninguna hoja.')
       const todas: Record<string, unknown[][]> = {}

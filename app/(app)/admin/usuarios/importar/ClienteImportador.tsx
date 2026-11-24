@@ -2,7 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type * as XLSXType from 'xlsx'
+// Se importa junto con la página, no al elegir el archivo: con carga diferida,
+// si se publicaba una versión nueva mientras la página estaba abierta, el
+// navegador pedía una pieza de la versión anterior que ya no existe
+// («Failed to load chunk»).
+import * as XLSX from 'xlsx'
 import Link from 'next/link'
 import Icono from '@/components/app/Icono'
 import { crearClienteNavegador } from '@/lib/supabase/client'
@@ -61,14 +65,14 @@ const inferirSede = (codigo: string, ccf: string, overrides: Map<string, string>
   return SEDE_POR_CCF[k] ?? 'Por confirmar'
 }
 
-function fechaIso(v: unknown, XLSX?: typeof XLSXType): string | null {
+function fechaIso(v: unknown): string | null {
   if (v === null || v === undefined || v === '') return null
   if (v instanceof Date) return v.toISOString().split('T')[0]
   if (typeof v === 'string') {
     const d = new Date(v)
     if (!isNaN(d.getTime())) return d.toISOString().split('T')[0]
   }
-  if (typeof v === 'number' && XLSX) {
+  if (typeof v === 'number') {
     const d = XLSX.SSF.parse_date_code(v)
     if (d) return `${d.y}-${String(d.m).padStart(2, '0')}-${String(d.d).padStart(2, '0')}`
   }
@@ -109,7 +113,6 @@ export default function ClienteImportador({ cargos }: { cargos: Cargo[] }) {
         .from('sede_overrides').select('codigo_contrato, sede')
       const overrides = new Map((overridesData ?? []).map(o => [o.codigo_contrato, o.sede]))
 
-      const XLSX = await import('xlsx')
       const buf = await file.arrayBuffer()
       const wb = XLSX.read(buf, { type: 'array', cellDates: true })
       const sheet = wb.Sheets[wb.SheetNames[0]]
@@ -133,15 +136,15 @@ export default function ClienteImportador({ cargos }: { cargos: Cargo[] }) {
           nombre,
           documento: txt(row['Documento']) || null,
           tipo_documento: txt(row['Tipo']) || 'CC',
-          fecha_ingreso: fechaIso(row['F. Ingreso'], XLSX),
+          fecha_ingreso: fechaIso(row['F. Ingreso']),
           salario: num(row['Salario']),
           valor_hora: num(row['Valor hora']),
           cargo_nombre: cargoNombre,
           caja_compensacion: ccf,
-          fecha_nacimiento: fechaIso(row['F. Nacimiento'], XLSX),
+          fecha_nacimiento: fechaIso(row['F. Nacimiento']),
           departamento: txt(row['Departamento']),
           ciudad: txt(row['Ciudad']),
-          fecha_retiro: fechaIso(row['F. Retiro'], XLSX),
+          fecha_retiro: fechaIso(row['F. Retiro']),
           sede_inferida: inferirSede(codigo, ccf, overrides),
           cargo_id: cargo?.id ?? null,
           // Campos opcionales del nuevo Excel (si no están en el archivo, quedan null)
